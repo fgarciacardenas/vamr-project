@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     git-all \
+    wget \
+    unzip \
     python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
@@ -37,8 +39,12 @@ RUN groupadd --gid ${GROUP_ID} ${USER_NAME} || echo "Group ${USER_NAME} already 
 # Create a user with the specified UID and GID
 RUN useradd --uid ${USER_ID} --gid ${GROUP_ID} --shell /bin/bash --create-home ${USER_NAME}
 
+# **Add passwordless sudo for devuser**
+RUN echo "${USER_NAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME} && \
+    chmod 0440 /etc/sudoers.d/${USER_NAME}
+
 # Set the working directory
-WORKDIR /home/dev/project
+WORKDIR /home/${USER_NAME}/project
 
 # Switch to the non-root user
 USER ${USER_NAME}
