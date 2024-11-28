@@ -1,14 +1,17 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from src.load_data import load_ground_truth_kitti, load_ground_truth_parking, get_left_images_malaga, read_image, load_matrix
+import os
 
 # Load the images from the 'data/' folder
 img1 = cv2.imread('data/kitti/05/image_0/000000.png', cv2.IMREAD_GRAYSCALE)
-img2 = cv2.imread('data/kitti/05/image_0/000002.png', cv2.IMREAD_GRAYSCALE)
+img2 = cv2.imread('data/kitti/05/image_0/000001.png', cv2.IMREAD_GRAYSCALE)
+img3 = cv2.imread('data/kitti/05/image_0/000002.png', cv2.IMREAD_GRAYSCALE)
 
 # Check if images are loaded properly
-if img1 is None or img2 is None:
-    print("Error: Image not found in the 'data/' folder. Make sure the images are present.")
+if img1 is None or img2 is None or img3 is None:
+    print("Error: One or more images not found in the 'data/' folder. Make sure the images are present.")
     exit()
 
 # Find features in the first image using the Shi-Tomasi method
@@ -18,33 +21,82 @@ p0 = cv2.goodFeaturesToTrack(img1, mask=None, **feature_params)
 # Parameters for the KLT (Lucas-Kanade) tracker
 lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-# Calculate the optical flow between img1 and img2
+# Calculate the optical flow from img1 to img2
 p1, st, err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None, **lk_params)
 
-# Check if any points are found
-if p1 is None or st is None:
-    print("Error: No points were found for tracking.")
-    exit()
+# Select good points for tracking from 00 to 01
+good_old_01 = p0[st.flatten() == 1]
+good_new_01 = p1[st.flatten() == 1]
 
-# Select good points for tracking
-good_new = p1[st == 1]
-good_old = p0[st == 1]
+# Calculate the optical flow from img2 to img3, continuing the tracking
+p2, st, err = cv2.calcOpticalFlowPyrLK(img2, img3, good_new_01, None, **lk_params)
+
+good_old_12 = good_new_01[st.flatten() == 1]
+good_new_12 = p2[st.flatten() == 1]
+
+# Calculate the optical flow directly from img1 to img3
+p2_direct, st_direct, err_direct = cv2.calcOpticalFlowPyrLK(img1, img3, p0, None, **lk_params)
+
+good_old_direct = p0[st_direct.flatten() == 1]
+good_new_direct = p2_direct[st_direct.flatten() == 1]
 
 # Create an image to display the results
-output_img = cv2.cvtColor(img2, cv2.COLOR_GRAY2BGR)
+output_img = cv2.cvtColor(img3, cv2.COLOR_GRAY2BGR)
 
-# Draw the tracks of the points
-for i, (new, old) in enumerate(zip(good_new, good_old)):
-    a, b = int(new[0]), int(new[1])
-    c, d = int(old[0]), int(old[1])
-    cv2.line(output_img, (a, b), (c, d), (0, 255, 0), 2)
+# Draw the tracks from 00 -> 01 -> 02
+for i, (new, old) in enumerate(zip(good_new_12, good_old_12)):
+    a, b = int(new.ravel()[0]), int(new.ravel()[1])
+    c, d = int(old.ravel()[0]), int(old.ravel()[1])
+    cv2.line(output_img, (a, b), (c, d), (255, 0, 0), 2)  # Blue lines for 00 -> 01 -> 02
     cv2.circle(output_img, (a, b), 5, (0, 0, 255), -1)
+
+# Draw the tracks from 00 -> 02 directly
+for i, (new, old) in enumerate(zip(good_new_direct, good_old_direct)):
+    a, b = int(new.ravel()[0]), int(new.ravel()[1])
+    c, d = int(old.ravel()[0]), int(old.ravel()[1])
+    cv2.line(output_img, (a, b), (c, d), (0, 255, 0), 2)  # Green lines for 00 -> 02 direct
+    cv2.circle(output_img, (a, b), 5, (255, 0, 0), -1)
 
 # Display the image with the tracked points using matplotlib
 plt.imshow(cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB))
-plt.title('KLT Tracking')
+plt.title('KLT Tracking from 00 -> 01 -> 02 and 00 -> 02')
 plt.axis('off')
 plt.show()
 
-# Save the image with the tracked points
-cv2.imwrite('klt_tracking_output.png', output_img)
+# Prepare points for estimating the fundamental matrix
+# Use the good points tracked directly from 00 -> 02
+good_pts1 = good_old_direct
+good_pts2 = good_new_direct
+
+# Estimate the fundamental matrix using RANSAC
+F, mask = cv2.findFundamentalMat(good_pts1, good_pts2, cv2.FM_RANSAC)
+
+# Select inlier points
+inlier_pts1 = good_pts1[mask.ravel() == 1]
+inlier_pts2 = good_pts2[mask.ravel() == 1]
+
+print("Estimated Fundamental Matrix:\n", F)
+
+#extract the essential matrix
+K_kitti  = np.array([
+            [7.18856e+02, 0, 6.071928e+02],
+            [0, 7.18856e+02, 1.852157e+02],
+            [0, 0, 1]
+        ])
+E_essential = K_kitti.T @ F @ K_kitti
+print("Estimated Essential Matrix:\n", E_essential)
+#disambiguate the 4 possible poses
+
+#recover the rotation and translation from the essential matrix
+_, R, t, _ = cv2.recoverPose(E_essential, inlier_pts1, inlier_pts2, K_kitti)
+print("Recovered Rotation:\n", R)
+print("Recovered Translation:\n", t)
+M = K_kitti @ np.hstack((R, t))
+#trinagulate the points
+points_4D = cv2.triangulatePoints(np.eye(3,4), M, inlier_pts1.T, inlier_pts2.T)
+points_3D = cv2.convertPointsFromHomogeneous(points_4D.T).reshape(-1,3)
+base_path = '/home/dev/data'
+kitti_path = os.path.join(base_path, 'kitti')
+ground_truth = load_ground_truth_kitti(kitti_path)
+print(ground_truth[0:4])
+
