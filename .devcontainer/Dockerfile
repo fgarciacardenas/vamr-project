@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     git-all \
     wget \
     unzip \
+    libglib2.0-0 \
     python3-venv && \
     rm -rf /var/lib/apt/lists/*
 
@@ -26,6 +27,7 @@ RUN pip3 install --upgrade pip
 # Install Python packages
 RUN pip3 install --no-cache-dir \
     scikit-learn \
+    opencv-python \
     tqdm
 
 # Add Build Arguments for UID and GID

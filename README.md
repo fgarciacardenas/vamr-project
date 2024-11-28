@@ -8,7 +8,7 @@ Repository for VAMR course project at UZH.
 4. Press Ctrl+Shift+P y select "Dev Container: Rebuild Container".
 
 # Download datasets
-Run the following bash script to download the required datasets:
+Run the following bash script to download the required datasets and unzip them:
 ```
 bash /home/dev/data/download_dataset.sh
 ```
