@@ -40,6 +40,7 @@ RUN pip3 install --no-cache-dir \
     opencv-python \
     matplotlib \
     pandas \
+    ipython \
     tqdm
 
 # Add Build Arguments for UID and GID

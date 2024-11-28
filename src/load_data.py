@@ -5,13 +5,7 @@ import cv2
 def load_ground_truth_kitti(kitti_path):
     poses_path = os.path.join(kitti_path, 'poses', '05.txt')
     ground_truth = np.loadtxt(poses_path)
-    ground_truth = ground_truth[:, [-9, -1]]  # Adjusted for 0-based indexing
-    return ground_truth
-
-def load_ground_truth_parking(parking_path):
-    poses_path = os.path.join(parking_path, 'poses.txt')
-    ground_truth = np.loadtxt(poses_path)
-    ground_truth = ground_truth[:, [-9, -1]]  # Adjusted for 0-based indexing
+    ground_truth = ground_truth[:, [-9, -1]]
     return ground_truth
 
 def get_left_images_malaga(malaga_path):
@@ -20,75 +14,67 @@ def get_left_images_malaga(malaga_path):
     left_images = all_images[2::2]  # Assuming first two are not images
     return left_images
 
+def load_ground_truth_parking(parking_path):
+    poses_path = os.path.join(parking_path, 'poses.txt')
+    ground_truth = np.loadtxt(poses_path)
+    ground_truth = ground_truth[:, [-9, -1]]
+    return ground_truth
+
 def read_image(path, grayscale=True):
     if grayscale:
         image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     else:
         image = cv2.imread(path, cv2.IMREAD_COLOR)
+    
     if image is None:
         raise FileNotFoundError(f"Image not found: {path}")
     return image
 
 def load_matrix(file_path):
-    """
-    Loads a 3x3 matrix from a text file, handling trailing commas.
-    
-    Args:
-        file_path (str): Path to the K.txt file.
-    
-    Returns:
-        np.ndarray: 3x3 camera intrinsic matrix.
-    """
+    # Load a 3x3 matrix from a text file, handling trailing commas.
     try:
-        # Use numpy.genfromtxt with delimiter ',' and specify usecols to ignore the trailing empty column
         matrix = np.genfromtxt(file_path, delimiter=',', usecols=(0, 1, 2))
         
         # Verify that the matrix has the correct shape
         if matrix.shape != (3, 3):
             raise ValueError(f"Expected a 3x3 matrix, but got shape {matrix.shape}")
-        
         return matrix
+    
     except Exception as e:
         print(f"Error loading K matrix from {file_path}: {e}")
         raise
 
 def main():
-    # Paths
+    # Define dataset paths
     base_path = '/home/dev/data'
     kitti_path = os.path.join(base_path, 'kitti')
     malaga_path = os.path.join(base_path, 'malaga')
     parking_path = os.path.join(base_path, 'parking')
 
     # Dataset selection: 0=KITTI, 1=Malaga, 2=Parking
-    ds = 2  # Change this value to select the dataset
+    ds = 1
 
-    # Bootstrap frames (to be set as needed)
-    bootstrap_frames = [0, 1]  # Example frame indices, adjust as needed
+    # Bootstrap frames
+    bootstrap_frames = [0, 1]
 
-    if ds == 0:
-        # KITTI Dataset
+    if ds == 0: # KITTI Dataset
         ground_truth = load_ground_truth_kitti(kitti_path)
         last_frame = 4540
-        K = np.array([
-            [7.18856e+02, 0, 6.071928e+02],
-            [0, 7.18856e+02, 1.852157e+02],
-            [0, 0, 1]
+        K = np.array([[7.18856e+02,           0, 6.071928e+02],
+                      [          0, 7.18856e+02, 1.852157e+02],
+                      [          0,           0,            1]
         ])
-    elif ds == 1:
-        # Malaga Dataset
+    elif ds == 1: # Malaga Dataset
         left_images = get_left_images_malaga(malaga_path)
         last_frame = len(left_images)
-        K = np.array([
-            [621.18428, 0, 404.0076],
-            [0, 621.18428, 309.05989],
-            [0, 0, 1]
+        K = np.array([[621.18428,         0, 404.00760],
+                      [        0, 621.18428, 309.05989],
+                      [        0,         0,         1]
         ])
-    elif ds == 2:
-        # Parking Dataset
+    elif ds == 2: # Parking Dataset
         ground_truth = load_ground_truth_parking(parking_path)
         last_frame = 598
-        K_path = os.path.join(parking_path, 'K.txt')
-        K = load_matrix(K_path)
+        K = load_matrix(os.path.join(parking_path, 'K.txt'))
     else:
         raise ValueError("Invalid dataset selection. Choose 0 (KITTI), 1 (Malaga), or 2 (Parking).")
 
@@ -140,13 +126,8 @@ def main():
         # Placeholder for processing the image
         # e.g., feature extraction, pose estimation, etc.
         # Example: Display the image (optional)
-        # cv2.imshow('Current Frame', image)
-        # cv2.waitKey(1)
-
-        # Refresh plots or perform other updates
-        cv2.waitKey(1)  # Small pause to allow GUI to update
-
-        prev_img = image
+        cv2.imshow('Current Frame', image)
+        cv2.waitKey(1)
 
     print("Processing completed.")
 
