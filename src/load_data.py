@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import numpy as np
 import cv2
@@ -31,11 +30,31 @@ def read_image(path, grayscale=True):
         raise FileNotFoundError(f"Image not found: {path}")
     return image
 
+def load_matrix(file_path):
+    """
+    Loads a matrix from a text file, handling commas and trailing commas.
+    """
+    try:
+        # First, attempt to load with comma delimiter
+        matrix = np.genfromtxt(file_path, delimiter=',', autostrip=True)
+        # Remove any columns that are entirely NaN (caused by trailing commas)
+        matrix = matrix[:, ~np.isnan(matrix).any(axis=0)]
+        return matrix
+    except Exception as e:
+        print(f"Error loading matrix with comma delimiter: {e}")
+        try:
+            # Fallback to space delimiter
+            matrix = np.loadtxt(file_path)
+            return matrix
+        except Exception as e2:
+            print(f"Error loading matrix with space delimiter: {e2}")
+            raise
+
 def main():
     # Paths
     base_path = '/home/dev/data'
     kitti_path = os.path.join(base_path, 'kitti')
-    malaga_path = os.path.join(base_path, 'malaga-urban-dataset-extract-07')
+    malaga_path = os.path.join(base_path, 'malaga')
     parking_path = os.path.join(base_path, 'parking')
 
     # Dataset selection: 0=KITTI, 1=Malaga, 2=Parking
@@ -66,7 +85,8 @@ def main():
         # Parking Dataset
         last_frame = 598
         K_path = os.path.join(parking_path, 'K.txt')
-        K = np.loadtxt(K_path)
+        K = load_matrix(K_path)
+
         ground_truth = load_ground_truth_parking(parking_path)
     else:
         raise ValueError("Invalid dataset selection. Choose 0 (KITTI), 1 (Malaga), or 2 (Parking).")

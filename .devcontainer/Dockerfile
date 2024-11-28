@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    python3-tk \
     # Libraries for X11 visualization
     libx11-dev \
     libxrender1 \
@@ -37,6 +38,8 @@ RUN pip3 install --upgrade pip
 RUN pip3 install --no-cache-dir \
     scikit-learn \
     opencv-python \
+    matplotlib \
+    pandas \
     tqdm
 
 # Add Build Arguments for UID and GID
@@ -62,3 +65,6 @@ USER ${USER_NAME}
 
 # Add /home/devuser/.local/bin to PATH
 ENV PATH=/home/${USER_NAME}/.local/bin:${PATH}
+
+# Set DISPLAY variable
+ENV DISPLAY=:0
