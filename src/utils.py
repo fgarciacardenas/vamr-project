@@ -177,18 +177,18 @@ class FrameManager:
         if self.dataset == 0:  # KITTI Dataset
             kitti_path = self.dataset_specific_data['kitti_path']
             image_path = os.path.join(kitti_path, '05', 'image_0', f"{next_index:06d}.png")
-            new_image = read_image(image_path, grayscale=False)
+            new_image = read_image(image_path, grayscale=True)
         elif self.dataset == 1:  # Malaga Dataset
             if next_index >= len(self.left_images):
                 raise IndexError(f"Frame {next_index} exceeds the number of available images.")
             malaga_path = self.dataset_specific_data['malaga_path']
             images_dir = os.path.join(malaga_path, 'malaga-urban-dataset-extract-07_rectified_800x600_Images')
             image_path = os.path.join(images_dir, self.left_images[next_index])
-            new_image = cv2.cvtColor(read_image(image_path, grayscale=False), cv2.COLOR_BGR2GRAY)
+            new_image = cv2.cvtColor(read_image(image_path, grayscale=True), cv2.COLOR_BGR2GRAY)
         elif self.dataset == 2:  # Parking Dataset
             parking_path = self.dataset_specific_data['parking_path']
             image_path = os.path.join(parking_path, 'images', f"img_{next_index:05d}.png")
-            new_image = cv2.cvtColor(read_image(image_path, grayscale=False), cv2.COLOR_BGR2GRAY)
+            new_image = cv2.cvtColor(read_image(image_path, grayscale=True), cv2.COLOR_BGR2GRAY)
             new_image = new_image.astype(np.uint8)
         else:
             raise ValueError("Invalid dataset selection during processing.")
