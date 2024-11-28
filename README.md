@@ -7,6 +7,11 @@ Repository for VAMR course project at UZH.
 3. Open the repository folder in VS Code.
 4. Press Ctrl+Shift+P y select "Dev Container: Rebuild Container".
 
+# Add X11 visualization to the Docker container
+```
+xhost +local:docker
+```
+
 # Download datasets
 Run the following bash script to download the required datasets and unzip them:
 ```

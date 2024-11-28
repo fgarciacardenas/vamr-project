@@ -13,8 +13,10 @@ services:
     container_name: vamr_project_container
     volumes:
       - ..:/home/dev/
+      - /tmp/.X11-unix:/tmp/.X11-unix  # Mount X11 socket
     working_dir: /home/dev/
     environment:
+      - DISPLAY=${DISPLAY}  # Pass the DISPLAY variable
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     deploy:

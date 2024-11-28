@@ -8,18 +8,27 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install APT packages including Python and pip
 RUN apt-get update && apt-get install -y \
+    # Ubuntu essentials    
     cmake \
     build-essential \
     sudo \
     rsync \
-    python3 \
-    python3-pip \
-    git-all \
     wget \
     unzip \
+    git-all \
+    # Python essentials
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Libraries for X11 visualization
+    libx11-dev \
+    libxrender1 \
+    libxext6 \
+    libfontconfig1 \
+    # Other dependencies
     libglib2.0-0 \
-    python3-venv && \
-    rm -rf /var/lib/apt/lists/*
+    # Remove cached data
+    && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip to the latest version (optional but recommended)
 RUN pip3 install --upgrade pip
