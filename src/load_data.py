@@ -2,6 +2,8 @@ import os
 import numpy as np
 import cv2
 
+SHOW_IMG = True
+
 def load_ground_truth_kitti(kitti_path):
     poses_path = os.path.join(kitti_path, 'poses', '05.txt')
     ground_truth = np.loadtxt(poses_path)
@@ -11,7 +13,7 @@ def load_ground_truth_kitti(kitti_path):
 def get_left_images_malaga(malaga_path):
     images_dir = os.path.join(malaga_path, 'malaga-urban-dataset-extract-07_rectified_800x600_Images')
     all_images = sorted(os.listdir(images_dir))
-    left_images = all_images[2::2]  # Assuming first two are not images
+    left_images = all_images[2::2]
     return left_images
 
 def load_ground_truth_parking(parking_path):
@@ -48,11 +50,11 @@ def main():
     # Define dataset paths
     base_path = '/home/dev/data'
     kitti_path = os.path.join(base_path, 'kitti')
-    malaga_path = os.path.join(base_path, 'malaga')
+    malaga_path = os.path.join(base_path, 'malaga-urban-dataset-extract-07')
     parking_path = os.path.join(base_path, 'parking')
 
     # Dataset selection: 0=KITTI, 1=Malaga, 2=Parking
-    ds = 1
+    ds = 2
 
     # Bootstrap frames
     bootstrap_frames = [0, 1]
@@ -123,11 +125,10 @@ def main():
         else:
             raise ValueError("Invalid dataset selection during processing.")
 
-        # Placeholder for processing the image
-        # e.g., feature extraction, pose estimation, etc.
-        # Example: Display the image (optional)
-        cv2.imshow('Current Frame', image)
-        cv2.waitKey(1)
+        # Display the image
+        if SHOW_IMG:
+            cv2.imshow('Current Frame', image)
+            cv2.waitKey(1)
 
     print("Processing completed.")
 
