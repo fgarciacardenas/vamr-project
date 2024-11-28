@@ -1,6 +1,11 @@
 # Docker files
 .devcontainer/
-data/
+
+# Ignore everything in the data/ folder
+data/*
+
+# Exclude (do not ignore) download_dataset.sh
+!data/download_dataset.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
