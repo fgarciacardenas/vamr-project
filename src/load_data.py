@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import cv2
-from glob import glob
 
 def load_ground_truth_kitti(kitti_path):
     poses_path = os.path.join(kitti_path, 'poses', '05.txt')
@@ -32,23 +31,26 @@ def read_image(path, grayscale=True):
 
 def load_matrix(file_path):
     """
-    Loads a matrix from a text file, handling commas and trailing commas.
+    Loads a 3x3 matrix from a text file, handling trailing commas.
+    
+    Args:
+        file_path (str): Path to the K.txt file.
+    
+    Returns:
+        np.ndarray: 3x3 camera intrinsic matrix.
     """
     try:
-        # First, attempt to load with comma delimiter
-        matrix = np.genfromtxt(file_path, delimiter=',', autostrip=True)
-        # Remove any columns that are entirely NaN (caused by trailing commas)
-        matrix = matrix[:, ~np.isnan(matrix).any(axis=0)]
+        # Use numpy.genfromtxt with delimiter ',' and specify usecols to ignore the trailing empty column
+        matrix = np.genfromtxt(file_path, delimiter=',', usecols=(0, 1, 2))
+        
+        # Verify that the matrix has the correct shape
+        if matrix.shape != (3, 3):
+            raise ValueError(f"Expected a 3x3 matrix, but got shape {matrix.shape}")
+        
         return matrix
     except Exception as e:
-        print(f"Error loading matrix with comma delimiter: {e}")
-        try:
-            # Fallback to space delimiter
-            matrix = np.loadtxt(file_path)
-            return matrix
-        except Exception as e2:
-            print(f"Error loading matrix with space delimiter: {e2}")
-            raise
+        print(f"Error loading K matrix from {file_path}: {e}")
+        raise
 
 def main():
     # Paths
@@ -83,11 +85,10 @@ def main():
         ])
     elif ds == 2:
         # Parking Dataset
+        ground_truth = load_ground_truth_parking(parking_path)
         last_frame = 598
         K_path = os.path.join(parking_path, 'K.txt')
         K = load_matrix(K_path)
-
-        ground_truth = load_ground_truth_parking(parking_path)
     else:
         raise ValueError("Invalid dataset selection. Choose 0 (KITTI), 1 (Malaga), or 2 (Parking).")
 
