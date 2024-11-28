@@ -1,5 +1,5 @@
 # Docker files
-.env
+.devcontainer
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
