@@ -15,7 +15,7 @@ def main():
     klt_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     # Initialize position
-    initialize_vo(frame_manager, ft_params, klt_params, _debug = True)
+    I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug = True)
 
     # current_state = {
     #         "keypoints_2D" : inlier_pts1,

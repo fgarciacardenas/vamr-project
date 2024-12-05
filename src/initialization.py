@@ -39,6 +39,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]
     P_2_inliers = P_2_inliers[mask.ravel() == 1]
+    P_0_outliers = (P_0[matches_1_2.flatten() == 0][matches_2_3.flatten() == 0]).append(P_0_inliers[mask.ravel() == 0])
 
     # Estimate the essential matrix
     K = frame_manager.get_intrinsic_params()
@@ -60,7 +61,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
         print("Recovered Translation (camera frame):\n", np.round(t,4))
         print("Recovered Translation (camera frame):\n", print(np.round(frame_manager.get_ground_truth()[0:4],4)))
 
-    return I_0, I_1, I_2, P_0_inliers, P_2_inliers
+    return I_2, P_0_inliers, P_2_inliers, P_0_outliers, points_3D, t
 
     # TODO: Populate C and Tau
     # Shape P_i as [2,N]
