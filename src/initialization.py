@@ -36,10 +36,16 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     # Estimate the fundamental matrix using RANSAC
     F, mask = cv2.findFundamentalMat(P_0_inliers, P_2_inliers, cv2.FM_RANSAC)
 
+    # Save outliers
+    P_0_outliers = np.concat([
+        P_0[matches_1_2.flatten() == 0],
+        P_1[matches_2_3.flatten() == 0],
+        P_0_inliers[mask.ravel() == 0]
+    ])
+
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]
     P_2_inliers = P_2_inliers[mask.ravel() == 1]
-    P_0_outliers = (P_0[matches_1_2.flatten() == 0][matches_2_3.flatten() == 0]).append(P_0_inliers[mask.ravel() == 0])
 
     # Estimate the essential matrix
     K = frame_manager.get_intrinsic_params()
