@@ -21,12 +21,12 @@ def track_candidates(C_old, F_old, Tau_old, img1, img2):
 
 def triangulate_ransac_pnp(X_old, P_new, K):
     # Triangulate the points using the PnP algorithm
-    _, R, t, inliers = cv2.solvePnPRansac(X_old, P_new, K, None)
-    inliers = inliers.flatten()
+    _, R_vec, t, inliers = cv2.solvePnPRansac(X_old, P_new, K, None)
+    R, _ = cv2.Rodrigues(R_vec)
+    inliers = inliers.reshape(-1)
     X_old = X_old[inliers]
     P_new = P_new[inliers]
     return X_old, P_new, R, t
-
 
 def expand_C(C, F, Tau, img, R, t):
     # Extract Harris corners from the image
@@ -45,3 +45,11 @@ def expand_C(C, F, Tau, img, R, t):
     F = np.unique(F, axis=1)
     
     return C, F, Tau
+
+def get_new_candidate_points(image, R, t):
+    C_new = cv2.goodFeaturesToTrack(image, maxCorners=200, qualityLevel=0.01, minDistance=7, blockSize=7)
+    T = np.concatenate((R, t), axis=1)
+    Tau = np.tile(T, (C_new.shape[0], 1, 1))
+    F = C_new
+
+    return C_new, F, Tau
