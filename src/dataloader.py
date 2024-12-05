@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import numpy as np
 import cv2
@@ -74,6 +75,7 @@ class FrameManager:
         self.bootstrap_frames = bootstrap_frames
         self.previous_image = None
         self.current_image = None
+        self.ground_truth = None
         self.left_images = []
         self.dataset_specific_data = {}
 
@@ -91,21 +93,17 @@ class FrameManager:
             self.dataset_specific_data['kitti_path'] = kitti_path
             self.ground_truth = load_ground_truth_kitti(kitti_path)
             self.last_frame = 4540
-            self.K = np.array([
-                [7.18856e+02, 0, 6.071928e+02],
-                [0, 7.18856e+02, 1.852157e+02],
-                [0, 0, 1]
-            ])
+            self.K = np.array([[7.18856e+02,           0, 6.071928e+02],
+                               [          0, 7.18856e+02, 1.852157e+02],
+                               [          0,           0,            1]])
         elif self.dataset == 1:  # Malaga Dataset
             malaga_path = os.path.join(self.base_path, 'malaga-urban-dataset-extract-07')
             self.dataset_specific_data['malaga_path'] = malaga_path
             self.left_images = get_left_images_malaga(malaga_path)
             self.last_frame = len(self.left_images) - 1
-            self.K = np.array([
-                [621.18428, 0, 404.00760],
-                [0, 621.18428, 309.05989],
-                [0, 0, 1]
-            ])
+            self.K = np.array([[621.18428,         0, 404.00760],
+                               [        0, 621.18428, 309.05989],
+                               [        0,         0,         1]])
         elif self.dataset == 2:  # Parking Dataset
             parking_path = os.path.join(self.base_path, 'parking')
             self.dataset_specific_data['parking_path'] = parking_path
@@ -143,6 +141,15 @@ class FrameManager:
             raise ValueError("Invalid dataset selection during bootstrap.")
         
         return img0, img1
+    
+    def get_intrinsic_params(self):
+        return self.K
+    
+    def get_ground_truth(self):
+        if self.ground_truth is None:
+            print("No ground truth available!")
+            return []    
+        return self.ground_truth
 
     def get_current(self):
         """
