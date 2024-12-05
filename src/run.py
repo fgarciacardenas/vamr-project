@@ -2,7 +2,7 @@
 from dataloader import *
 from initialization import *
 from utils import track_candidates
-
+from visualizer_class import MapVisualizer
 DATASET = 'kitty'
 
 def main():
@@ -15,8 +15,31 @@ def main():
     klt_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     # Initialize position
-    I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug = True)
+    I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug=True)
+    # Initialize visualizer
+    visualizer = MapVisualizer()
+    t_old = np.zeros((3, 1))
+    while True:
+        iFrame = 0
+        # Add the 3D points (triangulated)
+        visualizer.add_points(X_2)
 
+        # Add the new pose
+        visualizer.add_pose(cam_t + t_old)
+        t_old = cam_t + t_old
+
+        # Add inlier, outlier, and image
+        visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers)
+        visualizer.update_image(I_2)
+
+        visualizer.update_plot(iFrame)
+        iFrame += 1
+
+        # TODO: add continuous VO pipeline to update the plots
+        break
+
+    visualizer.close_video()
+    print(f"Video saved at {visualizer.video_path}")
     # current_state = {
     #         "keypoints_2D" : inlier_pts1,
     #         "keypoints_3D" : points_3D,
