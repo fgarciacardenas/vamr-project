@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from utils import *
 import matplotlib.pyplot as plt
-from candidate_kp import track_candidates
+from candidate_kp import track_candidates, triangulate_ransac_pnp, get_new_candidate_points
 
 def main():
     # Initialize FrameManager
@@ -23,22 +23,13 @@ def main():
     # Calculate the optical flow from img1 to img2
     p1, st, err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None, **lk_params)
 
-    print(p1.shape)
-    print(p1)
-    p1 = p1.T
-    p1 = p1.reshape(2, p1.shape[2])
-    print(p1.shape)
-    print(p1)
-    print(st.shape)
-    exit()
-    # Select good points for tracking from 00 to 01
-    good_old_01 = p0[st.flatten() == 1]
-    good_new_01 = p1[st.flatten() == 1]
+    # p1 = p1.T
+    # p1 = p1.reshape(2, p1.shape[2])
 
-    print(good_old_01.shape)
-    print(good_new_01.shape)
-    print(st.shape)
-    exit()
+    # Select good points for tracking from 00 to 01
+    good_old_01 = p0[st == 1]
+    good_new_01 = p1[st == 1]
+
     # Calculate the optical flow from img2 to img3, continuing the tracking
     p2, st, err = cv2.calcOpticalFlowPyrLK(img2, img3, good_new_01, None, **lk_params)
 
@@ -82,8 +73,8 @@ def main():
     F, mask = cv2.findFundamentalMat(good_pts1, good_pts2, cv2.FM_RANSAC)
 
     # Select inlier points
-    inlier_pts1 = good_pts1[mask.ravel() == 1]
-    inlier_pts2 = good_pts2[mask.ravel() == 1]
+    inlier_pts1 = good_pts1[mask == 1]
+    inlier_pts2 = good_pts2[mask == 1]
 
     print("Estimated Fundamental Matrix:\n", F)
 
@@ -109,22 +100,73 @@ def main():
     base_path = '/home/dev/data'
     kitti_path = os.path.join(base_path, 'kitti')
     ground_truth = load_ground_truth_kitti(kitti_path)
-    print(np.round(ground_truth[0:4],4))
+    # print(np.round(ground_truth[0:4],4))
     
-    F_init = inlier_pts1.T
-    Tau_init = np.full(F_init.shape[0], np.hstack((R, t)))
+    current_state = {
+            "keypoints_2D" : inlier_pts1,
+            "keypoints_3D" : points_3D,
+            "candidate_2D" : None,
+            "candidate_first_2D" : None,
+            "candidate_first_camera_pose" : None,
+        }
     
-    C_new, F_new, Tau_new = track_candidates(inlier_pts1.T, F_init, Tau_init, img2, img3)
-    print(C_new.shape)
-    print(F_new.shape)
-    print(Tau_new.shape)
-    
-    C_prime, F_prime, Tau_prime = expand_C(C_new, F_new, Tau_new, img3, R, t)
-    print(C_prime.shape)
-    print(F_prime.shape)
-    print(Tau_prime.shape)
-    # Triangulate the points using the PnP algorithm
-    X_new, P_new, R, t = triangulate_ransac_pnp(points_3D, inlier_pts1.T, K_kitti)
+    pose_arr = []
+    pose_arr.append(np.eye(4)) # Starting position
+    pose_arr.append(np.vstack((np.hstack((R, t)),
+                               np.array([0,0,0,1]))))
+
+    while frame_manager.has_next():
+        print("Next frame")
+        frame_manager.update()
+        image_current = frame_manager.get_current()
+        image_previous = frame_manager.get_previous()
+        previous_state = current_state
+
+        P_cur, st, err = cv2.calcOpticalFlowPyrLK(image_previous, image_current, previous_state['keypoints_2D'], None, **lk_params) # TODO: check what lk_params are
+        st = st.reshape(-1)
+        P_cur = P_cur[st == 1] # TODO: see if we can do this step in KLT ^
+        X_cur = previous_state['keypoints_3D'][st == 1]
+
+        X_cur, P_cur, R, t = triangulate_ransac_pnp(X_cur, P_cur, K_kitti)
+
+        new_C_S, new_C_F, new_C_tau = get_new_candidate_points(image_current, R, t)
+
+        if previous_state["candidate_2D"] is not None:
+            C_cur, st, err = cv2.calcOpticalFlowPyrLK(image_previous, image_current, previous_state['candidate_2D'], None, **lk_params) # TODO: check what lk_params are
+            st = st.reshape(-1)
+            C_cur = C_cur[st == 1] # TODO: see if we can do this step in KLT ^
+            F_cur = previous_state['candidate_first_2D'][st == 1]
+            tau_cur = previous_state['candidate_first_camera_pose'][st == 1]
+
+            cur_C_to_P_mask = check_for_alpha(C_cur, F_cur, tau_cur, R, t)
+            
+            P_cur += C_cur[cur_C_to_P_mask] # TODO: Find correct concat operation with uniqueness check
+            C_cur = C_cur[cur_C_to_P_mask == 0] # TODO: Find right way to invert mask
+
+            C_cur = C_cur + new_C_S # TODO: These should all be concat operations
+            F_cur = F_cur + new_C_F
+            tau_cur = tau_cur + new_C_tau
+
+        else:
+            C_cur, F_cur, tau_cur = new_C_S, new_C_F, new_C_tau
+
+
+
+        current_state = {
+            "keypoints_2D" : P_cur,
+            "keypoints_3D" : X_cur,
+            "candidate_2D" : C_cur,
+            "candidate_first_2D" : F_cur,
+            "candidate_first_camera_pose" : tau_cur,
+        }
+
+
+        previous_pose = pose_arr[-1]
+        current_transformation = np.vstack((np.hstack((R, t)),
+                                            np.array([0,0,0,1])))
+        next_pose = current_transformation@previous_pose
+        pose_arr.append(next_pose)
+
 
 if __name__ == "__main__":
-    main()\
+    main()
