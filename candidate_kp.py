@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import cv2
 import numpy as np
 
@@ -45,3 +44,4 @@ def expand_C(C, F, Tau, img, R, t):
     F = np.unique(F, axis=1)
     
     return C, F, Tau
+    
