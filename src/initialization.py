@@ -65,7 +65,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
         print("Estimated Essential Matrix:\n", E)
         print("Recovered Rotation (camera frame):\n", R)
         print("Recovered Translation (camera frame):\n", np.round(t,4))
-        print("Recovered Translation (camera frame):\n", print(np.round(frame_manager.get_ground_truth()[0:4],4)))
+        print("Ground-truth Translation (gt frame):\n", np.round(frame_manager.get_ground_truth()[0:4],4))
 
     return I_2, P_0_inliers, P_2_inliers, P_0_outliers, points_3D, t
 
