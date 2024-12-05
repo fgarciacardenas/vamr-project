@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from utils import *
 import matplotlib.pyplot as plt
+from candidate_kp import track_candidates
 
 def main():
     # Initialize FrameManager
@@ -22,10 +23,22 @@ def main():
     # Calculate the optical flow from img1 to img2
     p1, st, err = cv2.calcOpticalFlowPyrLK(img1, img2, p0, None, **lk_params)
 
+    print(p1.shape)
+    print(p1)
+    p1 = p1.T
+    p1 = p1.reshape(2, p1.shape[2])
+    print(p1.shape)
+    print(p1)
+    print(st.shape)
+    exit()
     # Select good points for tracking from 00 to 01
     good_old_01 = p0[st.flatten() == 1]
     good_new_01 = p1[st.flatten() == 1]
 
+    print(good_old_01.shape)
+    print(good_new_01.shape)
+    print(st.shape)
+    exit()
     # Calculate the optical flow from img2 to img3, continuing the tracking
     p2, st, err = cv2.calcOpticalFlowPyrLK(img2, img3, good_new_01, None, **lk_params)
 
@@ -60,7 +73,6 @@ def main():
     plt.title('KLT Tracking from 00 -> 01 -> 02 and 00 -> 02')
     plt.axis('off')
     plt.show()
-
     # Prepare points for estimating the fundamental matrix
     # Use the good points tracked directly from 00 -> 02
     good_pts1 = good_old_direct
@@ -98,6 +110,21 @@ def main():
     kitti_path = os.path.join(base_path, 'kitti')
     ground_truth = load_ground_truth_kitti(kitti_path)
     print(np.round(ground_truth[0:4],4))
+    
+    F_init = inlier_pts1.T
+    Tau_init = np.full(F_init.shape[0], np.hstack((R, t)))
+    
+    C_new, F_new, Tau_new = track_candidates(inlier_pts1.T, F_init, Tau_init, img2, img3)
+    print(C_new.shape)
+    print(F_new.shape)
+    print(Tau_new.shape)
+    
+    C_prime, F_prime, Tau_prime = expand_C(C_new, F_new, Tau_new, img3, R, t)
+    print(C_prime.shape)
+    print(F_prime.shape)
+    print(Tau_prime.shape)
+    # Triangulate the points using the PnP algorithm
+    X_new, P_new, R, t = triangulate_ransac_pnp(points_3D, inlier_pts1.T, K_kitti)
 
 if __name__ == "__main__":
-    main()
+    main()\
