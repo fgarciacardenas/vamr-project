@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 import numpy as np
+from dataloader import *
 
 def track_candidates(C_old, F_old, Tau_old, img1, img2):
     # Parameters for the KLT (Lucas-Kanade) tracker
@@ -53,3 +54,92 @@ def get_new_candidate_points(image, R, t):
     F = C_new
 
     return C_new, F, Tau
+
+def check_for_alpha(C_cur, F_cur, tau_cur, R, t, K, threshold=20):
+    N = C_cur.shape[0]
+
+    # Convert image points to normalized camera coordinates
+    C_cur_homogeneous = np.hstack((C_cur, np.ones((N, 1))))  # N x 3
+    C_camera = (np.linalg.inv(K) @ C_cur_homogeneous.T).T  # N x 3
+
+    F_cur_homogeneous = np.hstack((F_cur, np.ones((N, 1))))  # N x 3
+    F_camera = (np.linalg.inv(K) @ F_cur_homogeneous.T).T  # N x 3
+
+    # Normalize the direction vectors
+    C_camera_normalized = C_camera / np.linalg.norm(C_camera, axis=1, keepdims=True)  # N x 3
+    F_camera_normalized = F_camera / np.linalg.norm(F_camera, axis=1, keepdims=True)  # N x 3
+
+    # Transform direction vectors to world coordinates
+    C_world = (R.T @ C_camera_normalized.T).T  # N x 3
+
+    F_world = np.zeros_like(F_camera_normalized)
+    for i in range(N):
+        R_i = tau_cur[i, :3, :3]
+        F_world[i] = (R_i.T @ F_camera_normalized[i])
+
+    # Compute the angles between the two vectors
+    cos_theta = np.sum(C_world * F_world, axis=1)
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)  # Ensure values are within valid range
+    theta = np.arccos(cos_theta)
+
+    # Check if the angle is greater than the threshold
+    mask = theta > np.radians(threshold)
+
+    return mask
+
+def main():
+    import numpy as np
+
+    # Sample camera intrinsic matrix K_kitti
+    K_kitti = np.array([
+        [718.8560, 0, 607.1928],
+        [0, 718.8560, 185.2157],
+        [0, 0, 1]
+    ])
+
+    # Rotation matrix R and translation vector t for C_cur
+    R = np.eye(3)  # Identity rotation
+    t = np.zeros(3)  # Zero translation
+
+    # Sample image points C_cur and F_cur (N x 2 arrays)
+    C_cur = np.array([
+        [100, 100],
+        [150, 200],
+        [200, 250],
+        [250, 300],
+        [300, 350]
+    ])
+    F_cur = np.array([
+        [102, 98],
+        [148, 202],
+        [198, 252],
+        [248, 298],
+        [298, 352]
+    ])
+
+    N = C_cur.shape[0]
+
+    # Sample tau_cur (N x 3 x 4 array)
+    tau_cur = np.zeros((N, 3, 4))
+    for i in range(N):
+        # Rotation and translation for each F_cur
+        angle = np.radians(5 * (i+1))  # Varying rotation
+        R_i = np.array([
+            [ np.cos(angle), 0, np.sin(angle)],
+            [            0, 1,            0],
+            [-np.sin(angle), 0, np.cos(angle)]
+        ])
+        t_i = np.array([0.1 * (i+1), 0, 0])  # Varying translation
+
+        tau_cur[i, :3, :3] = R_i
+        tau_cur[i, :3, 3] = t_i
+
+    # Call the check_for_alpha function
+    mask = check_for_alpha(C_cur, F_cur, tau_cur, R, t, K_kitti)
+
+    print("Mask output:")
+    print(mask)
+    
+
+if __name__ == "__main__":
+    main()
