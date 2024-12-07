@@ -37,7 +37,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     F, mask = cv2.findFundamentalMat(P_0_inliers, P_2_inliers, cv2.FM_RANSAC)
 
     # Save outliers
-    P_0_outliers = np.concat([
+    P_0_outliers = np.concatenate([
         P_0[matches_1_2.flatten() == 0],
         P_1[matches_2_3.flatten() == 0],
         P_0_inliers[mask.ravel() == 0]
@@ -61,11 +61,13 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
 
     # Print debug outputs
     if _debug:
-        print("Estimated Fundamental Matrix:\n", F)
-        print("Estimated Essential Matrix:\n", E)
-        print("Recovered Rotation (camera frame):\n", R)
-        print("Recovered Translation (camera frame):\n", np.round(t,4))
-        print("Ground-truth Translation (gt frame):\n", np.round(frame_manager.get_ground_truth()[0:4],4))
+        print(f"Number of matches (KLT): {np.sum(matches_2_3)} out of {len(P_0)}")
+        print(f"Number of matches (Ransac): {len(P_0_inliers)} out of {len(P_0)}")
+        print("Estimated Fundamental Matrix:\n", np.round(F))
+        print("Estimated Essential Matrix:\n", np.round(E))
+        print("Recovered Rotation (camera frame):\n", np.round(R,3))
+        print("Recovered Translation (camera frame):\n", np.round(t,3).T[0])
+        print("Ground-truth Translation (gt frame):\n", np.round(np.sum(frame_manager.get_ground_truth()[0:3], axis=0),3))
 
     return I_2, P_0_inliers, P_2_inliers, P_0_outliers, points_3D, R, t
 

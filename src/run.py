@@ -3,22 +3,25 @@ from dataloader import *
 from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
+
 DATASET = 'kitty'
 
 def main():
     # Initialize FrameManager
     dataset_dir = {'kitty': 0, 'malaga': 1, 'parking': 2}
-    frame_manager = FrameManager(base_path='./data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
+    frame_manager = FrameManager(base_path='../data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
     lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+    
     # Load K matrix
     K_kitti = frame_manager.K
     
     # Configure modules
-    ft_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
+    ft_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7, useHarrisDetector=False)
     klt_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     # Initialize position
     I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug=True)
+    exit(1)
 
     current_state = {
         "keypoints_2D" : P_2_inliers,
@@ -52,7 +55,7 @@ def main():
         P_cur = P_cur[st == 1] # TODO: see if we can do this step in KLT ^
         X_cur = previous_state['keypoints_3D'][st == 1]
 
-        X_cur, P_cur, R, t = triangulate_r ansac_pnp(X_cur, P_cur, K_kitti)
+        X_cur, P_cur, R, t = triangulate_ransac_pnp(X_cur, P_cur, K_kitti)
 
         new_C_S, new_C_F, new_C_tau = get_new_candidate_points(image_current, R, t)
 

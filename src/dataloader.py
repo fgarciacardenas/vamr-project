@@ -6,7 +6,7 @@ import cv2
 def load_ground_truth_kitti(kitti_path):
     poses_path = os.path.join(kitti_path, 'poses', '05.txt')
     ground_truth = np.loadtxt(poses_path)
-    ground_truth = ground_truth[:, [-9, -1]]
+    ground_truth = ground_truth[:, [-9, -1]] # [tx,tz]
     return ground_truth
 
 def get_left_images_malaga(malaga_path):
