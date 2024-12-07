@@ -36,6 +36,13 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     # Estimate the fundamental matrix using RANSAC
     F, mask = cv2.findFundamentalMat(P_0_inliers, P_2_inliers, cv2.FM_RANSAC)
 
+    # Save outliers
+    P_0_outliers = np.concat([
+        P_0[matches_1_2.flatten() == 0],
+        P_1[matches_2_3.flatten() == 0],
+        P_0_inliers[mask.ravel() == 0]
+    ])
+
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]
     P_2_inliers = P_2_inliers[mask.ravel() == 1]
@@ -58,9 +65,9 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
         print("Estimated Essential Matrix:\n", E)
         print("Recovered Rotation (camera frame):\n", R)
         print("Recovered Translation (camera frame):\n", np.round(t,4))
-        print("Recovered Translation (camera frame):\n", print(np.round(frame_manager.get_ground_truth()[0:4],4)))
+        print("Ground-truth Translation (gt frame):\n", np.round(frame_manager.get_ground_truth()[0:4],4))
 
-    return I_0, I_1, I_2, P_0_inliers, P_2_inliers
+    return I_2, P_0_inliers, P_2_inliers, P_0_outliers, points_3D, R, t
 
     # TODO: Populate C and Tau
     # Shape P_i as [2,N]

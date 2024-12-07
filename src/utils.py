@@ -21,8 +21,12 @@ def track_candidates(C_old, F_old, Tau_old, img1, img2):
     return good_new_01, F_old, Tau_old
 
 def triangulate_ransac_pnp(X_old, P_new, K):
+    # Ensure the points are in the correct shape and type
+    X_old = X_old.astype(np.float32)
+    P_new = P_new.astype(np.float32)
+    
     # Triangulate the points using the PnP algorithm
-    _, R_vec, t, inliers = cv2.solvePnPRansac(X_old, P_new, K, None)
+    success, R_vec, t, inliers = cv2.solvePnPRansac(X_old, P_new, K, None)
     R, _ = cv2.Rodrigues(R_vec)
     inliers = inliers.reshape(-1)
     X_old = X_old[inliers]
