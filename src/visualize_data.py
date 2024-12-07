@@ -2,10 +2,12 @@
 from dataloader import *
 
 SHOW_IMG = True
+DATASET = 'kitty'
 
 def main():
-    # Initialize FrameManager. Dataset selection: 0=KITTI, 1=Malaga, 2=Parking
-    frame_manager = FrameManager(base_path = '/home/dev/data', dataset=0, bootstrap_frames=[0, 1])
+    # Initialize FrameManager
+    dataset_dir = {'kitty': 0, 'malaga': 1, 'parking': 2}
+    frame_manager = FrameManager(base_path = '/home/dev/data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
     
     # Continuous operation: Process frames until the end
     start_frame = frame_manager.current_index + 1
