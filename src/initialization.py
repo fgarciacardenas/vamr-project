@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from utils import *
+import numpy as np
+import cv2
 
 def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     
@@ -52,11 +54,15 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     E = K.T @ F @ K
 
     # Recover rotation and translation from the essential matrix
-    _, R, t, _ = cv2.recoverPose(E, P_0_inliers, P_2_inliers, K)
+    _, R, t, mask = cv2.recoverPose(E, P_0_inliers, P_2_inliers, K)
+    
+    P_0_inliers = P_0_inliers[mask.ravel() == 255].squeeze()
+    P_2_inliers = P_2_inliers[mask.ravel() == 255].squeeze()
+
     M = K @ np.hstack((R, t))
 
     # Triangulate the points
-    points_4D = cv2.triangulatePoints(np.eye(3,4), M, P_0_inliers.T, P_2_inliers.T)
+    points_4D = cv2.triangulatePoints(K @ np.eye(3,4), M, P_0_inliers.T, P_2_inliers.T)
     points_3D = cv2.convertPointsFromHomogeneous(points_4D.T).squeeze()
 
     # Print debug outputs
