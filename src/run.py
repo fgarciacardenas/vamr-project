@@ -5,6 +5,7 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'kitty'
+DEBUG = False
 
 def main():
     # Initialize FrameManager
@@ -13,14 +14,19 @@ def main():
     lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
     
     # Load K matrix
-    K_kitti = frame_manager.K
+    K = frame_manager.K
     
     # Configure modules
-    ft_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7, useHarrisDetector=False)
+    ft_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7, useHarrisDetector=True)
     klt_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     # Initialize position
-    I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug=True)
+    I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(
+        frame_manager=frame_manager, 
+        ft_params=ft_params, 
+        klt_params=klt_params, 
+        _debug=DEBUG
+    )
 
     current_state = {
         "keypoints_2D" : P_2_inliers,
@@ -40,49 +46,100 @@ def main():
     visualizer.add_pose(cam_t)
     visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers)
     visualizer.update_image(I_2)
+    
     iFrame = 0
     while frame_manager.has_next():
+        # Update frame manager
         print("Next frame")
         frame_manager.update()
-        image_current = frame_manager.get_current()
-        image_previous = frame_manager.get_previous()
+
+        # Obtain current and previous frames
+        I_curr = frame_manager.get_current()
+        I_prev = frame_manager.get_previous()
+
+        # Update state
         previous_state = current_state
 
-        P_cur, st, err = cv2.calcOpticalFlowPyrLK(image_previous, image_current, previous_state['keypoints_2D'], None, **klt_params) # TODO: check what klt_params are
-        st = st.reshape(-1)
-        P_cur = P_cur.reshape(-1, 2)
-        P_cur = P_cur[st == 1] # TODO: see if we can do this step in KLT ^
-        X_cur = previous_state['keypoints_3D'][st == 1]
+        # Compute optical flow for inlier features
+        P, matches, _ = cv2.calcOpticalFlowPyrLK(
+            prevImg=I_prev, 
+            nextImg=I_curr, 
+            prevPts=previous_state['keypoints_2D'], 
+            nextPts=None, 
+            **klt_params
+        ) # TODO: check what klt_params are
+        
+        # Flatten matches for ease of use
+        matches = matches.flatten()
 
-        X_cur, P_cur, R, t = triangulate_ransac_pnp(X_cur, P_cur, K_kitti)
+        # Select good tracking points from previous and new frame
+        P = P[matches == 1]
 
-        new_C_S, new_C_F, new_C_tau = get_new_candidate_points(image_current, R, t)
+        # Update previous state
+        X = previous_state['keypoints_3D'][matches == 1]
 
+        # Compute 3D-2D correspondences
+        X, P, R, t = ransac_pnp_pose_estimation(
+            X_3D=X, 
+            P_2D=P, 
+            K=K
+        )
+
+        # Compute feature candidates
+        C_candidate, F_candidate, Tau_candidate = ComputeCandidates(
+            I=I_curr, 
+            R=R, 
+            t=t, 
+            ft_params=ft_params
+        )
+
+        # Generate feature tracks
         if previous_state["candidate_2D"] is not None:
-            C_cur, st, err = cv2.calcOpticalFlowPyrLK(image_previous, image_current, previous_state['candidate_2D'], None, **lk_params) # TODO: check what lk_params are
-            st = st.reshape(-1)
-            C_cur = C_cur[st == 1] # TODO: see if we can do this step in KLT ^
-            F_cur = previous_state['candidate_first_2D'][st == 1]
-            tau_cur = previous_state['candidate_first_camera_pose'][st == 1]
+            
+            # Compute optical flow for tracked features
+            S_C, matches, _ = cv2.calcOpticalFlowPyrLK(
+                prevImg=I_prev, 
+                nextImg=I_curr, 
+                prevPts=previous_state['candidate_2D'], 
+                nextPts=None, 
+                **lk_params
+            )
 
-            cur_C_to_P_mask = check_for_alpha(C_cur, F_cur, tau_cur, R, t, K_kitti)
+            # Flatten matches for ease of use
+            matches = matches.flatten()
 
-            P_cur += C_cur[cur_C_to_P_mask] # TODO: Find correct concat operation with uniqueness check
-            C_cur = C_cur[cur_C_to_P_mask == 0] # TODO: Find right way to invert mask
+            # Find inliers in the previous state
+            S_C = S_C[matches == 1].squeeze()
+            S_F = previous_state['candidate_first_2D'][matches == 1].squeeze()
+            S_tau = previous_state['candidate_first_camera_pose'][matches == 1]
+            
+            # Angle between tracked features for thresholding
+            cur_C_to_P_mask = check_for_alpha(S_C, S_F, S_tau, R, t, K)
 
-            C_cur = C_cur + new_C_S # TODO: These should all be concat operations
-            F_cur = F_cur + new_C_F
-            tau_cur = tau_cur + new_C_tau
+            # Add inlier feature candidates not already in P
+            for C in S_C[cur_C_to_P_mask]:
+                is_member = np.any(np.all(np.isclose(P, C, rtol=1e-05, atol=1e-08), axis=1))
+
+                if not is_member:
+                    P = np.vstack([P, C])
+
+            # Track point that did not pass the alpha threshold
+            S_C = S_C[cur_C_to_P_mask == 0]
+
+            # Append feature candidates
+            S_C = np.vstack([S_C, C_candidate])
+            S_F = np.vstack([S_F, F_candidate])
+            S_tau = np.vstack([S_tau, Tau_candidate])
 
         else:
-            C_cur, F_cur, tau_cur = new_C_S, new_C_F, new_C_tau
+            S_C, S_F, S_tau = C_candidate, F_candidate, Tau_candidate
 
         current_state = {
-            "keypoints_2D" : P_cur,
-            "keypoints_3D" : X_cur,
-            "candidate_2D" : C_cur,
-            "candidate_first_2D" : F_cur,
-            "candidate_first_camera_pose" : tau_cur,
+            "keypoints_2D" : P,
+            "keypoints_3D" : X,
+            "candidate_2D" : S_C,
+            "candidate_first_2D" : S_F,
+            "candidate_first_camera_pose" : S_tau,
         }
 
         previous_pose = pose_arr[-1]
@@ -92,14 +149,13 @@ def main():
         pose_arr.append(next_pose)
 
         # Update visualizer
-        visualizer.add_points(X_cur)
+        visualizer.add_points(X)
         visualizer.add_pose(pose_arr[-1][:3,3])
         # visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers) TODO: ??
-        visualizer.update_image(image_current)
+        visualizer.update_image(I_curr)
 
         visualizer.update_plot(iFrame)
         iFrame += 1
-        break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")

@@ -16,16 +16,16 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     # ------------ Establish keypoint correspondences ------------
 
     # Find features in Frame 1 using Shi-Tomasi
-    P_0 = cv2.goodFeaturesToTrack(I_0, mask=None, **ft_params)
+    P_0 = cv2.goodFeaturesToTrack(image=I_0, mask=None, **ft_params)
 
     # Calculate the optical flow between frame 1 and 2
-    P_1, matches_1_2, _ = cv2.calcOpticalFlowPyrLK(I_0, I_1, P_0, None, **klt_params)
+    P_1, matches_1_2, _ = cv2.calcOpticalFlowPyrLK(prevImg=I_0, nextImg=I_1, prevPts=P_0, nextPts=None, **klt_params)
 
     # Select good tracking points from frame 1 to 2
     P_1_inliers = P_1[matches_1_2.flatten() == 1]
 
     # Calculate the optical flow between frame 2 and 3
-    P_2, matches_2_3, _ = cv2.calcOpticalFlowPyrLK(I_1, I_2, P_1_inliers, None, **klt_params)
+    P_2, matches_2_3, _ = cv2.calcOpticalFlowPyrLK(prevImg=I_1, nextImg=I_2, prevPts=P_1_inliers, nextPts=None, **klt_params)
 
     # Select good tracking points from frame 2 to 3
     P_2_inliers = P_2[matches_2_3.flatten() == 1]
@@ -36,7 +36,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     # ------------ Estimate relative pose ------------
 
     # Estimate the fundamental matrix using RANSAC
-    F, mask = cv2.findFundamentalMat(P_0_inliers, P_2_inliers, cv2.FM_RANSAC)
+    F, mask = cv2.findFundamentalMat(points1=P_0_inliers, points2=P_2_inliers, method=cv2.FM_RANSAC)
 
     # Save outliers
     P_0_outliers = np.concatenate([
@@ -54,7 +54,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     E = K.T @ F @ K
 
     # Recover rotation and translation from the essential matrix
-    _, R, t, mask = cv2.recoverPose(E, P_0_inliers, P_2_inliers, K)
+    _, R, t, mask = cv2.recoverPose(E=E, points1=P_0_inliers, points2=P_2_inliers, cameraMatrix=K)
     
     P_0_inliers = P_0_inliers[mask.ravel() == 255].squeeze()
     P_2_inliers = P_2_inliers[mask.ravel() == 255].squeeze()
@@ -62,8 +62,8 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     M = K @ np.hstack((R, t))
 
     # Triangulate the points
-    points_4D = cv2.triangulatePoints(K @ np.eye(3,4), M, P_0_inliers.T, P_2_inliers.T)
-    points_3D = cv2.convertPointsFromHomogeneous(points_4D.T).squeeze()
+    points_4D = cv2.triangulatePoints(projMatr1=K @ np.eye(3,4), projMatr2=M, projPoints1=P_0_inliers.T, projPoints2=P_2_inliers.T)
+    points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
 
     # Print debug outputs
     if _debug:

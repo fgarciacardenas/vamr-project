@@ -20,18 +20,21 @@ def track_candidates(C_old, F_old, Tau_old, img1, img2):
     Tau_old = Tau_old[:][st == 1]
     return good_new_01, F_old, Tau_old
 
-def triangulate_ransac_pnp(X_old, P_new, K):
-    # Ensure the points are in the correct shape and type
-    X_old = X_old.astype(np.float32)
-    P_new = P_new.astype(np.float32)
-    
+def ransac_pnp_pose_estimation(X_3D, P_2D, K):
     # Triangulate the points using the PnP algorithm
-    success, R_vec, t, inliers = cv2.solvePnPRansac(X_old, P_new, K, None)
+    success, R_vec, t, inliers = cv2.solvePnPRansac(objectPoints=X_3D, imagePoints=P_2D, cameraMatrix=K, distCoeffs=None)
+    
+    if not success or inliers is None:
+        # No solution found, return defaults
+        print("No solution found in SolvePnPRansac!")
+        return X_3D, P_2D, np.eye(3), np.zeros((3, 1))
+    
     R, _ = cv2.Rodrigues(R_vec)
     inliers = inliers.reshape(-1)
-    X_old = X_old[inliers]
-    P_new = P_new[inliers]
-    return X_old, P_new, R, t
+    X_3D_inliers = X_3D[inliers]
+    P_2D_inliers = P_2D[inliers]
+
+    return X_3D_inliers, P_2D_inliers, R, t
 
 def expand_C(C, F, Tau, img, R, t):
     # Extract Harris corners from the image
@@ -51,25 +54,34 @@ def expand_C(C, F, Tau, img, R, t):
     
     return C, F, Tau
 
-def get_new_candidate_points(image, R, t):
-    C_new = cv2.goodFeaturesToTrack(image, maxCorners=200, qualityLevel=0.01, minDistance=7, blockSize=7)
+def ComputeCandidates(I, R, t, ft_params):
+    # Compute feature candidates
+    C_new = cv2.goodFeaturesToTrack(image=I, mask=None, **ft_params)
+    C_new = C_new.squeeze()
+    
+    # Generate transformation matrix
     T = np.concatenate((R, t), axis=1)
+
+    # Ensure all feature candidates have the same transformation
     Tau = np.tile(T, (C_new.shape[0], 1, 1))
+
+    # First observations of the track of each keypoint
     F = C_new
 
     return C_new, F, Tau
 
-def check_for_alpha(C_cur, F_cur, tau_cur, R, t, K, threshold=20):
-    N = C_cur.shape[0]
+def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=20):
+    # Get number of candidates
+    N = S_C.shape[0]
 
-    # Convert image points to normalized camera coordinates
-    C_cur_homogeneous = np.hstack((C_cur, np.ones((N, 1))))  # N x 3
-    C_camera = (np.linalg.inv(K) @ C_cur_homogeneous.T).T  # N x 3
+    # Convert image points to normalized image coordinates
+    S_C_homogeneous = np.hstack((S_C, np.ones((N, 1))))  # N x 3
+    C_camera = (np.linalg.inv(K) @ S_C_homogeneous.T).T  # N x 3
 
-    F_cur_homogeneous = np.hstack((F_cur, np.ones((N, 1))))  # N x 3
-    F_camera = (np.linalg.inv(K) @ F_cur_homogeneous.T).T  # N x 3
+    S_F_homogeneous = np.hstack((S_F, np.ones((N, 1))))  # N x 3
+    F_camera = (np.linalg.inv(K) @ S_F_homogeneous.T).T  # N x 3
 
-    # Normalize the direction vectors
+    # Compute unit-plane normalized image coordinates
     C_camera_normalized = C_camera / np.linalg.norm(C_camera, axis=1, keepdims=True)  # N x 3
     F_camera_normalized = F_camera / np.linalg.norm(F_camera, axis=1, keepdims=True)  # N x 3
 
@@ -78,7 +90,7 @@ def check_for_alpha(C_cur, F_cur, tau_cur, R, t, K, threshold=20):
 
     F_world = np.zeros_like(F_camera_normalized)
     for i in range(N):
-        R_i = tau_cur[i, :3, :3]
+        R_i = S_tau[i, :3, :3]
         F_world[i] = (R_i.T @ F_camera_normalized[i])
 
     # Compute the angles between the two vectors
