@@ -72,9 +72,9 @@ class MapVisualizer:
             points_green2 (list of tuples): Second set of (x, y) coordinates for green crosses.
             points_red (list of tuples): List of (x, y) coordinates for red crosses.
         """
-        self.image_points_green1 = points_green1.squeeze()
-        self.image_points_green2 = points_green2.squeeze()
-        self.image_points_red = points_red.squeeze()
+        self.image_points_green1 = points_green1
+        self.image_points_green2 = points_green2
+        self.image_points_red = points_red
 
     def update_image(self, image):
         """Update the current image displayed in the plot.

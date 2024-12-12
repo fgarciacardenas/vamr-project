@@ -67,23 +67,28 @@ def main():
             prevPts=previous_state['keypoints_2D'], 
             nextPts=None, 
             **klt_params
-        ) # TODO: check what klt_params are
+        )
         
         # Flatten matches for ease of use
         matches = matches.flatten()
 
         # Select good tracking points from previous and new frame
-        P = P[matches == 1]
+        P_1_klt = P[matches == 1]
 
         # Update previous state
         X = previous_state['keypoints_3D'][matches == 1]
 
         # Compute 3D-2D correspondences
-        X, P, R, t = ransac_pnp_pose_estimation(
+        X, P_1_inliers, R, t, rs_inliers = ransac_pnp_pose_estimation(
             X_3D=X, 
-            P_2D=P, 
+            P_2D=P_1_klt, 
             K=K
         )
+
+        # Compute KLT visualization
+        P_0_inliers = previous_state['keypoints_2D'][matches == 1]
+        P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]])
+        P_0_inliers = P_0_inliers[rs_inliers]
 
         # Compute feature candidates
         C_candidate, F_candidate, Tau_candidate = ComputeCandidates(
@@ -118,10 +123,10 @@ def main():
 
             # Add inlier feature candidates not already in P
             for C in S_C[cur_C_to_P_mask]:
-                is_member = np.any(np.all(np.isclose(P, C, rtol=1e-05, atol=1e-08), axis=1))
+                is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=1e-05, atol=1e-08), axis=1))
 
                 if not is_member:
-                    P = np.vstack([P, C])
+                    P_1_inliers = np.vstack([P_1_inliers, C])
 
             # Track point that did not pass the alpha threshold
             S_C = S_C[cur_C_to_P_mask == 0]
@@ -135,7 +140,7 @@ def main():
             S_C, S_F, S_tau = C_candidate, F_candidate, Tau_candidate
 
         current_state = {
-            "keypoints_2D" : P,
+            "keypoints_2D" : P_1_inliers,
             "keypoints_3D" : X,
             "candidate_2D" : S_C,
             "candidate_first_2D" : S_F,
@@ -151,11 +156,13 @@ def main():
         # Update visualizer
         visualizer.add_points(X)
         visualizer.add_pose(pose_arr[-1][:3,3])
-        # visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers) TODO: ??
+        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers)
         visualizer.update_image(I_curr)
 
         visualizer.update_plot(iFrame)
         iFrame += 1
+        if iFrame >= 17:
+            break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")

@@ -27,14 +27,14 @@ def ransac_pnp_pose_estimation(X_3D, P_2D, K):
     if not success or inliers is None:
         # No solution found, return defaults
         print("No solution found in SolvePnPRansac!")
-        return X_3D, P_2D, np.eye(3), np.zeros((3, 1))
+        return X_3D, P_2D, np.eye(3), np.zeros((3, 1)), inliers
     
     R, _ = cv2.Rodrigues(R_vec)
     inliers = inliers.reshape(-1)
     X_3D_inliers = X_3D[inliers]
     P_2D_inliers = P_2D[inliers]
 
-    return X_3D_inliers, P_2D_inliers, R, t
+    return X_3D_inliers, P_2D_inliers, R, t, inliers
 
 def expand_C(C, F, Tau, img, R, t):
     # Extract Harris corners from the image
