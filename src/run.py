@@ -121,11 +121,26 @@ def main():
             cur_C_to_P_mask = check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3)
 
             # Add inlier feature candidates not already in P
+            C_inlier = []
             for C in S_C[cur_C_to_P_mask]:
                 is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=1e-05, atol=1e-08), axis=1))
 
                 if not is_member:
-                    P_1_inliers = np.vstack([P_1_inliers, C])
+                    C_inlier.append(C)
+            C_inlier = np.vstack(C_inlier)
+
+            # Triangulate inlier points
+            points_4D = cv2.triangulatePoints(
+                projMatr1=K @ np.eye(3,4), 
+                projMatr2=K @ np.hstack((R, t)), 
+                projPoints1=S_F[cur_C_to_P_mask].T, 
+                projPoints2=C_inlier.T
+            )
+            points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
+
+            # Update P and X using valid candidates
+            P_1_inliers = np.vstack([P_1_inliers, C_inlier])
+            X = np.vstack([X, points_3D])
 
             # Track point that did not pass the alpha threshold
             S_C = S_C[cur_C_to_P_mask == 0]
@@ -163,6 +178,8 @@ def main():
 
         visualizer.update_plot(iFrame)
         iFrame += 1
+        if iFrame >= 40:
+            break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")
