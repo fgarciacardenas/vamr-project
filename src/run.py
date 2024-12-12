@@ -11,7 +11,6 @@ def main():
     # Initialize FrameManager
     dataset_dir = {'kitty': 0, 'malaga': 1, 'parking': 2}
     frame_manager = FrameManager(base_path='../data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
-    lk_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
     
     # Load K matrix
     K = frame_manager.K
@@ -107,7 +106,7 @@ def main():
                 nextImg=I_curr, 
                 prevPts=previous_state['candidate_2D'], 
                 nextPts=None, 
-                **lk_params
+                **klt_params
             )
 
             # Flatten matches for ease of use
@@ -119,7 +118,7 @@ def main():
             S_tau = previous_state['candidate_first_camera_pose'][matches == 1]
             
             # Angle between tracked features for thresholding
-            cur_C_to_P_mask = check_for_alpha(S_C, S_F, S_tau, R, t, K)
+            cur_C_to_P_mask = check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3)
 
             # Add inlier feature candidates not already in P
             for C in S_C[cur_C_to_P_mask]:
@@ -130,6 +129,8 @@ def main():
 
             # Track point that did not pass the alpha threshold
             S_C = S_C[cur_C_to_P_mask == 0]
+            S_F = S_F[cur_C_to_P_mask == 0]
+            S_tau = S_tau[cur_C_to_P_mask == 0]
 
             # Append feature candidates
             S_C = np.vstack([S_C, C_candidate])
@@ -147,6 +148,7 @@ def main():
             "candidate_first_camera_pose" : S_tau,
         }
 
+        # Compute camera poses in the world frame
         previous_pose = pose_arr[-1]
         current_transformation = np.vstack((np.hstack((R, t)),
                                             np.array([0,0,0,1])))
@@ -161,8 +163,6 @@ def main():
 
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 17:
-            break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")

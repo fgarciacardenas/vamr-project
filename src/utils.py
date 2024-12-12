@@ -70,7 +70,7 @@ def ComputeCandidates(I, R, t, ft_params):
 
     return C_new, F, Tau
 
-def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=20):
+def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3):
     # Get number of candidates
     N = S_C.shape[0]
 
