@@ -18,13 +18,14 @@ class MapVisualizer:
         self.video_writer = None
 
         # Set up the figure and subplots using GridSpec
-        self.fig = plt.figure(figsize=(12, 8))
+        self.fig = plt.figure(figsize=(12, 8), constrained_layout=True)
 
         # Create a GridSpec with 2 rows and 2 columns
-        gs_main = GridSpec(2, 2, height_ratios=[3, 1], width_ratios=[1, 1], figure=self.fig)
+        gs_main = GridSpec(2, 2, height_ratios=[1, 1], width_ratios=[1, 1], figure=self.fig)
 
         # Left top: Trajectory of last 20 frames with landmarks
         self.ax_recent_trajectory = self.fig.add_subplot(gs_main[0, 0])
+        self.ax_recent_trajectory.set_aspect('equal', adjustable='datalim')  # Square aspect
 
         # Right top: Image with overlaid points
         self.ax_image = self.fig.add_subplot(gs_main[0, 1])
@@ -34,10 +35,12 @@ class MapVisualizer:
 
         # Right bottom: Full trajectory over all frames
         self.ax_full_trajectory = self.fig.add_subplot(gs_main[1, 1])
+        self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')  # Square aspect
 
         # Create output directory if it does not exist
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
+
 
     def add_points(self, points):
         """Add new 3D points to the map.
@@ -110,8 +113,9 @@ class MapVisualizer:
         self.ax_recent_trajectory.cla()
         self.ax_recent_trajectory.set_title("Recent Trajectory and Landmarks")
         self.ax_recent_trajectory.set_xlabel('X')
-        self.ax_recent_trajectory.set_ylabel('Y')
-        self.ax_recent_trajectory.set_aspect('equal')
+        self.ax_recent_trajectory.set_ylabel('Z')  
+        self.ax_recent_trajectory.set_aspect('equal', adjustable='datalim')  # Ensure squared axis
+
 
         # Get the last 20 frames
         last_n = 20
@@ -120,13 +124,13 @@ class MapVisualizer:
 
         if points_recent:
             x_vals = [p[0] for p in points_recent]
-            y_vals = [p[1] for p in points_recent]
-            self.ax_recent_trajectory.scatter(x_vals, y_vals, c='b', marker='o', s=5)
+            z_vals = [p[2] for p in points_recent]  # Use Z values
+            self.ax_recent_trajectory.scatter(x_vals, z_vals, c='b', marker='o', s=5)
 
         if trajectory_recent:
             traj_x = [p[0] for p in trajectory_recent]
-            traj_y = [p[1] for p in trajectory_recent]
-            self.ax_recent_trajectory.plot(traj_x, traj_y, c='r')
+            traj_z = [p[2] for p in trajectory_recent]  # Use Z values
+            self.ax_recent_trajectory.plot(traj_x, traj_z, c='r')
 
         # Update landmark count plot
         self.ax_landmarks.cla()
@@ -142,15 +146,18 @@ class MapVisualizer:
         self.ax_full_trajectory.set_title("Full Trajectory")
         self.ax_full_trajectory.set_xlabel('X')
         self.ax_full_trajectory.set_ylabel('Y')
-        self.ax_full_trajectory.set_aspect('equal')
+        #set axis to be squared:
+        self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')
+        
+
 
         if self.trajectory:
             traj_x_full = [p[0] for p in self.trajectory]
-            traj_y_full = [p[1] for p in self.trajectory]
+            traj_y_full = [p[2] for p in self.trajectory]
             self.ax_full_trajectory.plot(traj_x_full, traj_y_full, c='r')
 
         # Adjust layout
-        self.fig.tight_layout()
+        #self.fig.tight_layout()
 
         # Save the current frame as an image
         frame_path = os.path.join(self.output_dir, f"frame_{frame_idx:04d}.png")
