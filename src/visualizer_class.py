@@ -127,7 +127,10 @@ class MapVisualizer:
             traj_x = [p[0] for p in trajectory_recent]
             traj_z = [p[2] for p in trajectory_recent]  # Use Z values
             self.ax_recent_trajectory.plot(traj_x, traj_z, c='r')
-
+        x_center =traj_x[-1]
+        y_center =traj_z[-1]
+        self.ax_recent_trajectory.set_xlim([x_center - 50, x_center + 50])
+        self.ax_recent_trajectory.set_ylim([y_center - 50, y_center + 50])
         # Update landmark count plot
         self.ax_landmarks.cla()
         self.ax_landmarks.set_title("# Tracked Landmarks Over Time")
