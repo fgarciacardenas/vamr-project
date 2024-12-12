@@ -49,7 +49,7 @@ class MapVisualizer:
             points (list of tuples): List of (x, y, z) coordinates.
         """
         self.points.extend(points)
-        self.update_landmark_count()
+        self.landmark_counts.append(len(points))
 
     def add_pose(self, pose):
         """Add a new pose to the trajectory.
@@ -59,10 +59,6 @@ class MapVisualizer:
         """
         pose = pose.squeeze()
         self.trajectory.append((pose[0], pose[1], pose[2]))
-
-    def update_landmark_count(self):
-        """Automatically update the landmark count based on the number of points."""
-        self.landmark_counts.append(len(self.points))
 
     def add_image_points(self, points_green1, points_green2, points_red):
         """Add points to overlay on the image.
