@@ -6,7 +6,7 @@ from matplotlib.gridspec import GridSpec
 
 class MapVisualizer:
 
-    def __init__(self, output_dir='output', video_path='output/video.avi'):
+    def __init__(self, output_dir='output', video_path='output/video.mp4'):
         self.points = []
         self.trajectory = []
         self.landmark_counts = []
@@ -54,6 +54,7 @@ class MapVisualizer:
         Args:
             pose (tuple): (x, y, z) coordinates of the pose.
         """
+        pose = pose.squeeze()
         self.trajectory.append((pose[0], pose[1], pose[2]))
 
     def update_landmark_count(self):
@@ -159,7 +160,7 @@ class MapVisualizer:
         if self.video_writer is None:
             width, height = self.fig.get_size_inches() * self.fig.dpi
             width, height = int(width), int(height)
-            self.video_writer = cv2.VideoWriter(self.video_path, cv2.VideoWriter_fourcc(*'XVID'), 10, (width, height))
+            self.video_writer = cv2.VideoWriter(self.video_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (width, height))
 
         self.fig.canvas.draw()
         frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)

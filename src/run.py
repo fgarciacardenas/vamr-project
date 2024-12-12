@@ -21,7 +21,6 @@ def main():
 
     # Initialize position
     I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(frame_manager, ft_params, klt_params, _debug=True)
-    exit(1)
 
     current_state = {
         "keypoints_2D" : P_2_inliers,
@@ -91,8 +90,8 @@ def main():
                                             np.array([0,0,0,1])))
         next_pose = current_transformation@previous_pose
         pose_arr.append(next_pose)
-    
 
+        # Update visualizer
         visualizer.add_points(X_cur)
         visualizer.add_pose(pose_arr[-1][:3,3])
         # visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers) TODO: ??
@@ -100,6 +99,7 @@ def main():
 
         visualizer.update_plot(iFrame)
         iFrame += 1
+        break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")
