@@ -127,14 +127,14 @@ class FrameManager:
             images_dir = os.path.join(malaga_path, 'malaga-urban-dataset-extract-07_rectified_800x600_Images')
             img0_path = os.path.join(images_dir, self.left_images[self.bootstrap_frames[0]])
             img1_path = os.path.join(images_dir, self.left_images[self.bootstrap_frames[1]])
-            img0 = cv2.cvtColor(read_image(img0_path, grayscale=True), cv2.COLOR_BGR2GRAY)
-            img1 = cv2.cvtColor(read_image(img1_path, grayscale=True), cv2.COLOR_BGR2GRAY)
+            img0 = read_image(img0_path, grayscale=True)
+            img1 = read_image(img1_path, grayscale=True)
         elif self.dataset == 2:  # Parking Dataset
             parking_path = self.dataset_specific_data['parking_path']
             img0_path = os.path.join(parking_path, 'images', f"img_{self.bootstrap_frames[0]:05d}.png")
             img1_path = os.path.join(parking_path, 'images', f"img_{self.bootstrap_frames[1]:05d}.png")
-            img0 = cv2.cvtColor(read_image(img0_path, grayscale=True), cv2.COLOR_BGR2GRAY)
-            img1 = cv2.cvtColor(read_image(img1_path, grayscale=True), cv2.COLOR_BGR2GRAY)
+            img0 = read_image(img0_path, grayscale=True)
+            img1 = read_image(img1_path, grayscale=True)
             img0 = img0.astype(np.uint8)
             img1 = img1.astype(np.uint8)
         else:
@@ -191,11 +191,11 @@ class FrameManager:
             malaga_path = self.dataset_specific_data['malaga_path']
             images_dir = os.path.join(malaga_path, 'malaga-urban-dataset-extract-07_rectified_800x600_Images')
             image_path = os.path.join(images_dir, self.left_images[next_index])
-            new_image = cv2.cvtColor(read_image(image_path, grayscale=True), cv2.COLOR_BGR2GRAY)
+            new_image = read_image(image_path, grayscale=True)
         elif self.dataset == 2:  # Parking Dataset
             parking_path = self.dataset_specific_data['parking_path']
             image_path = os.path.join(parking_path, 'images', f"img_{next_index:05d}.png")
-            new_image = cv2.cvtColor(read_image(image_path, grayscale=True), cv2.COLOR_BGR2GRAY)
+            new_image = read_image(image_path, grayscale=True)
             new_image = new_image.astype(np.uint8)
         else:
             raise ValueError("Invalid dataset selection during processing.")

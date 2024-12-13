@@ -30,7 +30,7 @@ def ransac_pnp_pose_estimation(X_3D, P_2D, K):
         return X_3D, P_2D, np.eye(3), np.zeros((3, 1)), inliers
     
     R, _ = cv2.Rodrigues(R_vec)
-    inliers = inliers.reshape(-1)
+    inliers = inliers.squeeze()
     X_3D_inliers = X_3D[inliers]
     P_2D_inliers = P_2D[inliers]
 
@@ -54,14 +54,11 @@ def expand_C(C, F, Tau, img, R, t):
     
     return C, F, Tau
 
-def ComputeCandidates(I, R, t, ft_params):
+def ComputeCandidates(I, T, ft_params):
     # Compute feature candidates
     C_new = cv2.goodFeaturesToTrack(image=I, mask=None, **ft_params)
     C_new = C_new.squeeze()
     
-    # Generate transformation matrix
-    T = np.concatenate((R, t), axis=1)
-
     # Ensure all feature candidates have the same transformation
     Tau = np.tile(T, (C_new.shape[0], 1, 1))
 
@@ -70,7 +67,7 @@ def ComputeCandidates(I, R, t, ft_params):
 
     return C_new, F, Tau
 
-def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3):
+def check_for_alpha(S_C, S_F, S_tau, R, K, threshold=0.3):
     # Get number of candidates
     N = S_C.shape[0]
 
@@ -86,12 +83,12 @@ def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3):
     F_camera_normalized = F_camera / np.linalg.norm(F_camera, axis=1, keepdims=True)  # N x 3
 
     # Transform direction vectors to world coordinates
-    C_world = (R.T @ C_camera_normalized.T).T  # N x 3
+    C_world = (R @ C_camera_normalized.T).T  # N x 3
 
     F_world = np.zeros_like(F_camera_normalized)
     for i in range(N):
         R_i = S_tau[i, :3, :3]
-        F_world[i] = (R_i.T @ F_camera_normalized[i])
+        F_world[i] = (R_i @ F_camera_normalized[i])
 
     # Compute the angles between the two vectors
     cos_theta = np.sum(C_world * F_world, axis=1)
@@ -99,7 +96,8 @@ def check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3):
     theta = np.arccos(cos_theta)
 
     # Check if the angle is greater than the threshold
-    mask = theta > np.radians(threshold)
+    mask = theta > threshold
+    print(f"Average alpha (rad): {round(theta.mean(), 3)} | Num passing: {sum(mask)}")
 
     return mask
 
@@ -151,7 +149,11 @@ def main():
         tau_cur[i, :3, 3] = t_i
 
     # Call the check_for_alpha function
-    mask = check_for_alpha(C_cur, F_cur, tau_cur, R, t, K_kitti)
+    mask = check_for_alpha(S_C=C_cur, 
+                            S_F=F_cur,
+                            S_tau=tau_cur,
+                            R=R,
+                            K=K_kitti)
 
     print("Mask output:")
     print(mask)

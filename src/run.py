@@ -10,7 +10,7 @@ DEBUG = False
 def main():
     # Initialize FrameManager
     dataset_dir = {'kitty': 0, 'malaga': 1, 'parking': 2}
-    frame_manager = FrameManager(base_path='../data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
+    frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
     
     # Load K matrix
     K = frame_manager.K
@@ -49,7 +49,7 @@ def main():
     iFrame = 0
     while frame_manager.has_next():
         # Update frame manager
-        print("Next frame")
+        print(f"Frame {iFrame}")
         frame_manager.update()
 
         # Obtain current and previous frames
@@ -89,11 +89,17 @@ def main():
         P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]])
         P_0_inliers = P_0_inliers[rs_inliers]
 
+        # Compute camera poses in the world frame
+        previous_pose = pose_arr[-1]
+        current_transformation = np.vstack((np.hstack((R, t)),
+                                            np.array([0,0,0,1])))
+        next_pose = current_transformation@previous_pose
+        pose_arr.append(next_pose)
+
         # Compute feature candidates
         C_candidate, F_candidate, Tau_candidate = ComputeCandidates(
             I=I_curr, 
-            R=R, 
-            t=t, 
+            T=next_pose, 
             ft_params=ft_params
         )
 
@@ -118,34 +124,45 @@ def main():
             S_tau = previous_state['candidate_first_camera_pose'][matches == 1]
             
             # Angle between tracked features for thresholding
-            cur_C_to_P_mask = check_for_alpha(S_C, S_F, S_tau, R, t, K, threshold=0.3)
+            cur_C_to_P_mask = check_for_alpha(S_C=S_C, 
+                                              S_F=S_F,
+                                              S_tau=S_tau,
+                                              R=next_pose[:3,:3],
+                                              K=K,
+                                              threshold=0.3)
 
             # Add inlier feature candidates not already in P
-            C_inlier = []
-            for C in S_C[cur_C_to_P_mask]:
+            member_and_alpha_mask = np.zeros(S_C.shape[0])
+            for i, C in enumerate(S_C):
+                if not cur_C_to_P_mask[i]:
+                    continue
                 is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=1e-05, atol=1e-08), axis=1))
-
                 if not is_member:
-                    C_inlier.append(C)
-            C_inlier = np.vstack(C_inlier)
+                    member_and_alpha_mask[i] = 1
+            if sum(member_and_alpha_mask):
+                C_inlier = S_C[member_and_alpha_mask == 1]
+                S_F_inlier = S_F[member_and_alpha_mask == 1]
+                S_tau_inlier = S_tau[member_and_alpha_mask == 1]
 
-            # Triangulate inlier points
-            points_4D = cv2.triangulatePoints(
-                projMatr1=K @ np.eye(3,4), 
-                projMatr2=K @ np.hstack((R, t)), 
-                projPoints1=S_F[cur_C_to_P_mask].T, 
-                projPoints2=C_inlier.T
-            )
-            points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
-
-            # Update P and X using valid candidates
-            P_1_inliers = np.vstack([P_1_inliers, C_inlier])
-            X = np.vstack([X, points_3D])
+                # Triangulate inlier points
+                points_4D = []
+                for can, first,tau in zip(C_inlier, S_F_inlier, S_tau_inlier):
+                    points_4D.append(cv2.triangulatePoints(
+                        projMatr1=K @ tau[:3],
+                        projMatr2=K @ next_pose[:3], 
+                        projPoints1=first, 
+                        projPoints2=can
+                    ))
+                points_4D = np.array(points_4D).T
+                points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
+                # Update P and X using valid candidates
+                P_1_inliers = np.vstack([P_1_inliers, C_inlier])
+                X = np.vstack([X, points_3D])
 
             # Track point that did not pass the alpha threshold
-            S_C = S_C[cur_C_to_P_mask == 0]
-            S_F = S_F[cur_C_to_P_mask == 0]
-            S_tau = S_tau[cur_C_to_P_mask == 0]
+            S_C = S_C[member_and_alpha_mask == 0]
+            S_F = S_F[member_and_alpha_mask == 0]
+            S_tau = S_tau[member_and_alpha_mask == 0]
 
             # Append feature candidates
             S_C = np.vstack([S_C, C_candidate])
@@ -163,22 +180,14 @@ def main():
             "candidate_first_camera_pose" : S_tau,
         }
 
-        # Compute camera poses in the world frame
-        previous_pose = pose_arr[-1]
-        current_transformation = np.vstack((np.hstack((R, t)),
-                                            np.array([0,0,0,1])))
-        next_pose = current_transformation@previous_pose
-        pose_arr.append(next_pose)
-
         # Update visualizer
         visualizer.add_points(X)
-        visualizer.add_pose(pose_arr[-1][:3,3])
+        visualizer.add_pose(next_pose[:3,3])
         visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers)
         visualizer.update_image(I_curr)
-
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 40:
+        if iFrame >= 100:
             break
 
     visualizer.close_video()
