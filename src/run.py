@@ -4,7 +4,7 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'kitty'
+DATASET = 'parking'
 DEBUG = False
 
 def main():
@@ -16,7 +16,7 @@ def main():
     K = frame_manager.K
     
     # Configure modules
-    ft_params = dict(maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7, useHarrisDetector=True)
+    ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
     klt_params = dict(winSize=(15, 15), maxLevel=2, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
     # Initialize position

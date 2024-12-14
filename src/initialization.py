@@ -43,7 +43,7 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
         P_0[matches_1_2.flatten() == 0],
         P_1[matches_2_3.flatten() == 0],
         P_0_inliers[mask.ravel() == 0]
-    ]).squeeze()
+    ]).reshape([-1,2])
 
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]
