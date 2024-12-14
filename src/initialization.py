@@ -39,11 +39,12 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     F, mask = cv2.findFundamentalMat(points1=P_0_inliers, points2=P_2_inliers, method=cv2.FM_RANSAC)
 
     # Save outliers
-    P_0_outliers = np.concatenate([
-        P_0[matches_1_2.flatten() == 0],
-        P_1[matches_2_3.flatten() == 0],
-        P_0_inliers[mask.ravel() == 0]
-    ]).reshape([-1,2])
+    # P_0_outliers = np.concatenate([
+    #     P_0[matches_1_2.flatten() == 0],
+    #     P_1[matches_2_3.flatten() == 0],
+    #     P_0_inliers[mask.ravel() == 0]
+    # ]).reshape([-1,2])
+    P_0_outliers = None
 
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]

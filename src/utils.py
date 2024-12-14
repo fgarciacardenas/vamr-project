@@ -97,7 +97,7 @@ def check_for_alpha(S_C, S_F, S_tau, R, K, threshold=0.3):
 
     # Check if the angle is greater than the threshold
     mask = theta > threshold
-    print(f"Average alpha (rad): {round(theta.mean(), 3)} | Num passing: {sum(mask)}")
+    # print(f"Average alpha (rad): {round(theta.mean(), 3)} | Num passing: {sum(mask)}")
 
     return mask
 

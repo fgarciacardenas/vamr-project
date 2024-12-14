@@ -9,7 +9,7 @@ DEBUG = False
 
 def main():
     # Initialize FrameManager
-    dataset_dir = {'kitty': 0, 'malaga': 1, 'parking': 2}
+    dataset_dir = {'kitti': 0, 'malaga': 1, 'parking': 2}
     frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
     
     # Load K matrix
@@ -89,11 +89,8 @@ def main():
         P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]])
         P_0_inliers = P_0_inliers[rs_inliers]
 
-        # Compute camera poses in the world frame
-        previous_pose = pose_arr[-1]
-        current_transformation = np.vstack((np.hstack((R, t)),
-                                            np.array([0,0,0,1])))
-        next_pose = np.linalg.inv(current_transformation)@previous_pose
+        next_pose = np.vstack((np.hstack((R, t)),
+                               np.array([0,0,0,1])))
         pose_arr.append(next_pose)
 
         # Compute feature candidates
@@ -187,7 +184,7 @@ def main():
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 100:
+        if iFrame >= 50:
             break
 
     visualizer.close_video()

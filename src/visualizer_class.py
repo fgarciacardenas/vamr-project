@@ -147,7 +147,7 @@ class MapVisualizer:
         self.ax_full_trajectory.cla()
         self.ax_full_trajectory.set_title("Full Trajectory")
         self.ax_full_trajectory.set_xlabel('X')
-        self.ax_full_trajectory.set_ylabel('Y')
+        self.ax_full_trajectory.set_ylabel('Z')
         #set axis to be squared:
         self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')
         
