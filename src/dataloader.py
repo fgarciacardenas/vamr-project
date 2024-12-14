@@ -6,7 +6,7 @@ import cv2
 def load_ground_truth_kitti(kitti_path):
     poses_path = os.path.join(kitti_path, 'poses', '05.txt')
     ground_truth = np.loadtxt(poses_path)
-    ground_truth = ground_truth[:, [-9, -1]] # [tx,tz]
+    ground_truth = ground_truth[:, [-9,-5,-1]] # [tx,ty,tz]
     return ground_truth
 
 def get_left_images_malaga(malaga_path):
@@ -18,7 +18,7 @@ def get_left_images_malaga(malaga_path):
 def load_ground_truth_parking(parking_path):
     poses_path = os.path.join(parking_path, 'poses.txt')
     ground_truth = np.loadtxt(poses_path)
-    ground_truth = ground_truth[:, [-9, -1]]
+    ground_truth = ground_truth[:, [-9,-5,-1]] # [tx,ty,tz]
     return ground_truth
 
 def read_image(path, grayscale=True):
@@ -150,6 +150,11 @@ class FrameManager:
             print("No ground truth available!")
             return []    
         return self.ground_truth
+    
+    def get_current_ground_truth(self):
+        if self.ground_truth is None:
+            return np.array([0.0, 0.0, 0.0])
+        return self.ground_truth[self.current_index]
 
     def get_current(self):
         """

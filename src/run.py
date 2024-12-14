@@ -93,7 +93,7 @@ def main():
         previous_pose = pose_arr[-1]
         current_transformation = np.vstack((np.hstack((R, t)),
                                             np.array([0,0,0,1])))
-        next_pose = current_transformation@previous_pose
+        next_pose = np.linalg.inv(current_transformation)@previous_pose
         pose_arr.append(next_pose)
 
         # Compute feature candidates
@@ -136,7 +136,7 @@ def main():
             for i, C in enumerate(S_C):
                 if not cur_C_to_P_mask[i]:
                     continue
-                is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=1e-05, atol=1e-08), axis=1))
+                is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=5e-3, atol=1e-1), axis=1))
                 if not is_member:
                     member_and_alpha_mask[i] = 1
             if sum(member_and_alpha_mask):
@@ -182,7 +182,7 @@ def main():
 
         # Update visualizer
         visualizer.add_points(X)
-        visualizer.add_pose(next_pose[:3,3])
+        visualizer.add_pose(next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
         visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)

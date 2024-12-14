@@ -9,6 +9,7 @@ class MapVisualizer:
     def __init__(self, output_dir='/home/dev/output', video_path='/home/dev/output/video.mp4'):
         self.points = []
         self.trajectory = []
+        self.ground_truth = []
         self.landmark_counts = []
         self.image_points_green1 = None
         self.image_points_green2 = None
@@ -51,7 +52,7 @@ class MapVisualizer:
         self.points.extend(points)
         self.landmark_counts.append(len(points))
 
-    def add_pose(self, pose):
+    def add_pose(self, pose, ground_truth=None):
         """Add a new pose to the trajectory.
 
         Args:
@@ -59,6 +60,8 @@ class MapVisualizer:
         """
         pose = pose.squeeze()
         self.trajectory.append((pose[0], pose[1], pose[2]))
+        if ground_truth is not None:
+            self.ground_truth.append((ground_truth[0], ground_truth[1], ground_truth[2]))
 
     def add_image_points(self, points_green1, points_green2, points_red):
         """Add points to overlay on the image.
@@ -154,7 +157,10 @@ class MapVisualizer:
             traj_x_full = [p[0] for p in self.trajectory]
             traj_y_full = [p[2] for p in self.trajectory]
             self.ax_full_trajectory.plot(traj_x_full, traj_y_full, c='r')
-
+        if self.ground_truth:
+            gt_x_full = [p[0] for p in self.ground_truth]
+            gt_y_full = [p[2] for p in self.ground_truth]
+            self.ax_full_trajectory.plot(gt_x_full, gt_y_full, c='black')
         # Adjust layout
         #self.fig.tight_layout()
 
