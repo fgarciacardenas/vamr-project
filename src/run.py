@@ -162,9 +162,14 @@ def main():
             S_tau = S_tau[member_and_alpha_mask == 0]
 
             # Append feature candidates
-            S_C = np.vstack([S_C, C_candidate])
-            S_F = np.vstack([S_F, F_candidate])
-            S_tau = np.vstack([S_tau, Tau_candidate])
+            c_duplicate_mask = []
+            for i, new_C in enumerate(C_candidate):
+                is_member = np.any(np.all(np.isclose(new_C, S_C, rtol=5e-3, atol=1e-1), axis=1))
+                if not is_member:
+                    c_duplicate_mask.append(i)
+            S_C = np.vstack([S_C, C_candidate[c_duplicate_mask]])
+            S_F = np.vstack([S_F, F_candidate[c_duplicate_mask]])
+            S_tau = np.vstack([S_tau, Tau_candidate[c_duplicate_mask]])
 
         else:
             S_C, S_F, S_tau = C_candidate, F_candidate, Tau_candidate
