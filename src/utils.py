@@ -68,6 +68,18 @@ def ComputeCandidates(I, T, ft_params):
     return C_new, F, Tau
 
 def check_for_alpha(S_C, S_F, S_tau, R, K, threshold=0.3):
+    """
+    Args:
+        S_C (np.ndarray): Image points in the current frame (N x 2).
+        S_F (np.ndarray): Image points in the first frame (N x 2).
+        S_tau (np.ndarray): Camera poses in the first frame (N x 3 x 4).
+        R (np.ndarray): Rotation matrix from world coordinates to the current frame (3 x 3).
+        K (np.ndarray): Camera intrinsic matrix (3 x 3).
+        threshold (float): Threshold for the angle between the two vectors (in radians).
+    
+    Returns:
+        np.ndarray: Mask of the image points that pass the threshold (N x 1).
+    """
     # Get number of candidates
     N = S_C.shape[0]
 
@@ -83,12 +95,12 @@ def check_for_alpha(S_C, S_F, S_tau, R, K, threshold=0.3):
     F_camera_normalized = F_camera / np.linalg.norm(F_camera, axis=1, keepdims=True)  # N x 3
 
     # Transform direction vectors to world coordinates
-    C_world = (R @ C_camera_normalized.T).T  # N x 3
+    C_world = (R.T @ C_camera_normalized.T).T  # N x 3
 
     F_world = np.zeros_like(F_camera_normalized)
     for i in range(N):
         R_i = S_tau[i, :3, :3]
-        F_world[i] = (R_i @ F_camera_normalized[i])
+        F_world[i] = (R_i.T @ F_camera_normalized[i])
 
     # Compute the angles between the two vectors
     cos_theta = np.sum(C_world * F_world, axis=1)

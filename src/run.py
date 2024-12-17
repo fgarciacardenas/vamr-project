@@ -5,7 +5,7 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
-DEBUG = False
+DEBUG = True
 
 def main():
     # Initialize FrameManager
@@ -27,22 +27,77 @@ def main():
         _debug=DEBUG
     )
 
-    current_state = {
-        "keypoints_2D" : P_2_inliers,
-        "keypoints_3D" : X_2,
-        "candidate_2D" : None,
-        "candidate_first_2D" : None,
-        "candidate_first_camera_pose" : None,
-    }
+    # Perfect initializer
+    if DEBUG:
+        # Use ground truth poses to initialize
+        I_0 = frame_manager.get_frame(0)
+        I_2 = frame_manager.get_frame(2)
+        pose_0 = frame_manager.get_ground_truth_pose(0)
+        pose_2 = frame_manager.get_ground_truth_pose(2)
+        
+        # Convert poses to appropriate format
+        pose_0[:3, 3] = -pose_0[:3, :3].T @ pose_0[:3, 3]
+        pose_2[:3, 3] = -pose_2[:3, :3].T @ pose_2[:3, 3]
+        
+        # Extract features from the first image
+        ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=7, blockSize=7)
+        C_0 = cv2.goodFeaturesToTrack(I_0, mask=None, **ft_params)
+        C_0 = np.squeeze(C_0)
+        
+        # Track features to the third image
+        klt_params = dict(winSize=(21, 21), maxLevel=4,
+                          criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.01))
+        C_2, st, err = cv2.calcOpticalFlowPyrLK(I_0, I_2, C_0, None, **klt_params)
+        st = st.flatten()
+        
+        # Select good points
+        C_0_good = C_0[st == 1]
+        C_2_good = C_2[st == 1]
+        
+        # Triangulate 3D points using ground truth poses
+        points_4D = cv2.triangulatePoints(
+            projMatr1=K @ pose_0[:3],
+            projMatr2=K @ pose_2[:3],
+            projPoints1=C_0_good.T,
+            projPoints2=C_2_good.T
+        )
+        points_3D = cv2.convertPointsFromHomogeneous(points_4D.T).reshape(-1, 3)
+        
+        # Initialize rotation and translation
+        cam_R = pose_2[:3, :3]
+        cam_t = pose_2[:3, 3].reshape(-1, 1)
+        
+        # Set keypoints and point cloud
+        P_2_inliers = C_2_good
+        X_2 = points_3D
+        
+        # Update current state
+        current_state = {
+            "keypoints_2D": P_2_inliers,
+            "keypoints_3D": X_2,
+            "candidate_2D": None,
+            "candidate_first_2D" : None,
+            "candidate_first_camera_pose" : None,
+        }
+    
+    if not DEBUG:
+        current_state = {
+            "keypoints_2D" : P_2_inliers,
+            "keypoints_3D" : X_2,
+            "candidate_2D" : None,
+            "candidate_first_2D" : None,
+            "candidate_first_camera_pose" : None,
+        }
 
     pose_arr = []
     pose_arr.append(np.eye(4)) # Starting position
+
     pose_arr.append(np.vstack((np.hstack((cam_R, cam_t)),
                                    np.array([0,0,0,1]))))
     # Initialize visualizer
     visualizer = MapVisualizer()
     visualizer.add_points(X_2)
-    visualizer.add_pose(cam_t)
+    visualizer.add_pose(-cam_R.T@cam_t)
     visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers)
     visualizer.update_image(I_2)
     
@@ -179,12 +234,12 @@ def main():
 
         # Update visualizer
         visualizer.add_points(X)
-        visualizer.add_pose(next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
+        visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
         visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 50:
+        if iFrame >= 200:
             break
 
     visualizer.close_video()

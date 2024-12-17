@@ -155,6 +155,19 @@ class FrameManager:
         if self.ground_truth is None:
             return np.array([0.0, 0.0, 0.0])
         return self.ground_truth[self.current_index]
+    
+    def get_ground_truth_pose(self, frame_idx):
+        """
+        Returns the ground truth pose for the given frame index.
+        WARNING: This function is only available for the KITTI and Parking datasets.
+        The rotation matrix is assumed to be the identity matrix.
+        """
+        if self.ground_truth is None:
+            return np.eye(4)
+        pose = self.ground_truth[frame_idx]
+        pose_matrix = np.eye(4)
+        pose_matrix[:3, 3] = pose
+        return pose_matrix
 
     def get_current(self):
         """
@@ -218,3 +231,31 @@ class FrameManager:
             bool: True if more frames are available, False otherwise.
         """
         return self.current_index < self.last_frame
+    
+    def get_frame(self, frame_idx):
+        """
+        Returns the image corresponding to the given frame index.
+
+        Args:
+            frame_idx (int): Frame index.
+
+        Returns:
+            np.ndarray: Image corresponding to the frame index.
+        """
+        if self.dataset == 0:
+            kitti_path = self.dataset_specific_data['kitti_path']
+            image_path = os.path.join(kitti_path, '05', 'image_0', f"{frame_idx:06d}.png")      
+        elif self.dataset == 1:
+            malaga_path = self.dataset_specific_data['malaga_path']
+            images_dir = os.path.join(malaga_path, 'malaga-urban-dataset-extract-07_rectified_800x600_Images')
+            image_path = os.path.join(images_dir, self.left_images[frame_idx])
+        elif self.dataset == 2:
+            parking_path = self.dataset_specific_data['parking_path']
+            image_path = os.path.join(parking_path, 'images', f"img_{frame_idx:05d}.png")
+        else:
+            raise ValueError("Invalid dataset selection during image retrieval.")
+        
+        if self.dataset == 2:
+            return read_image(image_path, grayscale=True).astype(np.uint8)
+        
+        return read_image(image_path, grayscale=True)

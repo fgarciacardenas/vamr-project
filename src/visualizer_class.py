@@ -6,7 +6,7 @@ from matplotlib.gridspec import GridSpec
 
 class MapVisualizer:
 
-    def __init__(self, output_dir='/home/dev/output', video_path='/home/dev/output/video.mp4'):
+    def __init__(self, output_dir='/home/dev/output/test', video_path='/home/dev/output/video.mp4'):
         self.points = []
         self.trajectory = []
         self.ground_truth = []
@@ -59,6 +59,10 @@ class MapVisualizer:
             pose (tuple): (x, y, z) coordinates of the pose.
         """
         pose = pose.squeeze()
+        #R = pose[:3, :3]
+        #t = pose[:3, 3]
+        #t = -R.T @ t
+        #self.trajectory.append((t[0], t[1], t[2]))
         self.trajectory.append((pose[0], pose[1], pose[2]))
         if ground_truth is not None:
             self.ground_truth.append((ground_truth[0], ground_truth[1], ground_truth[2]))
