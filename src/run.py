@@ -13,8 +13,8 @@ Conventions:
 - Tau: Camera pose when the feature was first observed
 - P: Inlier features
 - X: 3D points in the world frame
-- R: Rotation matrix that takes points from the world frame to the camera frame
-- t: Translation vector that takes points from the world frame to the camera frame
+- R_a_b: Rotation from frame b to frame a.
+- t_a_b: Translation from frame b to frame a.
 
 """
 def main():
