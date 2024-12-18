@@ -14,6 +14,7 @@ class MapVisualizer:
         self.image_points_green1 = None
         self.image_points_green2 = None
         self.image_points_red = None
+        self.rotations = []
         self.harris_points = None
         self.output_dir = output_dir
         self.video_path = video_path
@@ -67,21 +68,6 @@ class MapVisualizer:
         self.trajectory.append((pose[0], pose[1], pose[2]))
         if ground_truth is not None:
             self.ground_truth.append((ground_truth[0], ground_truth[1], ground_truth[2]))
-
-    def add_image_points(self, points_green1, points_green2, points_red,harris_points):
-        """Add points to overlay on the image.
-
-        Args:
-            points_green1 (list of tuples): First set of (x, y) coordinates for green crosses.
-            points_green2 (list of tuples): Second set of (x, y) coordinates for green crosses.
-            points_red (list of tuples): List of (x, y) coordinates for red crosses.
-        """
-        self.image_points_green1 = points_green1
-        self.image_points_green2 = points_green2
-        self.image_points_red = points_red
-        self.harris_points = harris_points
-
-
     def update_image(self, image):
         """Update the current image displayed in the plot.
 
@@ -116,30 +102,90 @@ class MapVisualizer:
             x_vals_harris = [p[0] for p in self.harris_points]
             y_vals_harris = [p[1] for p in self.harris_points]
             self.ax_image.scatter(x_vals_harris, y_vals_harris, c='b', marker='x', s=20)
+    def add_image_points(self, points_green1, points_green2, points_red,harris_points):
+        """Add points to overlay on the image.
+
+        Args:
+            points_green1 (list of tuples): First set of (x, y) coordinates for green crosses.
+            points_green2 (list of tuples): Second set of (x, y) coordinates for green crosses.
+            points_red (list of tuples): List of (x, y) coordinates for red crosses.
+        """
+        self.image_points_green1 = points_green1
+        self.image_points_green2 = points_green2
+        self.image_points_red = points_red
+        self.harris_points = harris_points
+
+
+    def add_pose(self, pose, R=None, ground_truth=None):
+        pose = pose.squeeze()
+        self.trajectory.append((pose[0], pose[1], pose[2]))
+        if R is not None:
+            self.rotations.append(R)
+        if ground_truth is not None:
+            self.ground_truth.append((ground_truth[0], ground_truth[1], ground_truth[2]))
+
+    def euler_from_matrix(self, R):
+        sy = np.sqrt(R[0, 0] ** 2 + R[1, 0] ** 2)
+        singular = sy < 1e-6
+
+        if not singular:
+            x = np.arctan2(R[2, 1], R[2, 2])
+            y = np.arctan2(-R[2, 0], sy)
+            z = np.arctan2(R[1, 0], R[0, 0])
+        else:
+            x = np.arctan2(-R[1, 2], R[1, 1])
+            y = np.arctan2(-R[2, 0], sy)
+            z = 0
+
+        return np.rad2deg((x, y, z))
+
     def update_plot(self, frame_idx):
-        """Update all subplots with the latest data and save the frame as an image and video."""
-        # Update trajectory plot of the last 20 frames with landmarks
         self.ax_recent_trajectory.cla()
         self.ax_recent_trajectory.set_title("Recent Trajectory and Landmarks")
         self.ax_recent_trajectory.set_xlabel('X')
         self.ax_recent_trajectory.set_ylabel('Z')  
-        self.ax_recent_trajectory.set_aspect('equal', adjustable='datalim')  # Ensure squared axis
+        self.ax_recent_trajectory.set_aspect('equal', adjustable='datalim')
 
-
-        # Get the last 20 frames
         last_n = 20
         trajectory_recent = self.trajectory[-last_n:] if len(self.trajectory) >= last_n else self.trajectory
+        rotations_recent = self.rotations[-last_n:] if len(self.rotations) >= last_n else self.rotations
         points_recent = self.points[-last_n:] if len(self.points) >= last_n else self.points
-
         if points_recent:
             x_vals = [p[0] for p in points_recent]
             z_vals = [p[2] for p in points_recent]  # Use Z values
             self.ax_recent_trajectory.scatter(x_vals, z_vals, c='b', marker='o', s=5)
-
         if trajectory_recent:
             traj_x = [p[0] for p in trajectory_recent]
-            traj_z = [p[2] for p in trajectory_recent]  # Use Z values
+            traj_z = [p[2] for p in trajectory_recent]
             self.ax_recent_trajectory.plot(traj_x, traj_z, c='r')
+
+            # Add local frame vectors
+            for i, (x, z, R) in enumerate(zip(traj_x, traj_z, rotations_recent)):
+                if R is not None:
+                    scale = 1.5  # Adjust for visualization scale
+                    vx, vz = R[:3, 0], R[:3, 2]  # Local frame x and z axes
+
+                    # Plot Vx (local x-axis)
+                    self.ax_recent_trajectory.arrow(x, z, scale * vx[0], scale * vx[2], color='g', head_width=scale, label='Vx' if i == 0 else "")
+
+                    # Plot Vz (local z-axis)
+                    self.ax_recent_trajectory.arrow(x, z, scale * vz[0], scale * vz[2], color='b', head_width=scale, label='Vz' if i == 0 else "")
+
+        self.ax_full_trajectory.cla()
+        self.ax_full_trajectory.set_title("Full Trajectory")
+        self.ax_full_trajectory.set_xlabel('X')
+        self.ax_full_trajectory.set_ylabel('Z')
+        self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')
+
+        if self.trajectory:
+            traj_x_full = [p[0] for p in self.trajectory]
+            traj_y_full = [p[2] for p in self.trajectory]
+            self.ax_full_trajectory.plot(traj_x_full, traj_y_full, c='r')
+        if self.ground_truth:
+            gt_x_full = [p[0] for p in self.ground_truth]
+            gt_y_full = [p[2] for p in self.ground_truth]
+            self.ax_full_trajectory.plot(gt_x_full, gt_y_full, c='black')
+
         x_center =traj_x[-1]
         y_center =traj_z[-1]
         self.ax_recent_trajectory.set_xlim([x_center - 50, x_center + 50])
@@ -152,33 +198,9 @@ class MapVisualizer:
 
         if self.landmark_counts:
             self.ax_landmarks.plot(self.landmark_counts, c='g')
-
-        # Update full trajectory plot
-        self.ax_full_trajectory.cla()
-        self.ax_full_trajectory.set_title("Full Trajectory")
-        self.ax_full_trajectory.set_xlabel('X')
-        self.ax_full_trajectory.set_ylabel('Z')
-        #set axis to be squared:
-        self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')
-        
-
-
-        if self.trajectory:
-            traj_x_full = [p[0] for p in self.trajectory]
-            traj_y_full = [p[2] for p in self.trajectory]
-            self.ax_full_trajectory.plot(traj_x_full, traj_y_full, c='r')
-        if self.ground_truth:
-            gt_x_full = [p[0] for p in self.ground_truth]
-            gt_y_full = [p[2] for p in self.ground_truth]
-            self.ax_full_trajectory.plot(gt_x_full, gt_y_full, c='black')
-        # Adjust layout
-        #self.fig.tight_layout()
-
-        # Save the current frame as an image
         frame_path = os.path.join(self.output_dir, f"frame_{frame_idx:04d}.png")
         self.fig.savefig(frame_path)
 
-        # Convert the plot to a video frame
         if self.video_writer is None:
             width, height = self.fig.get_size_inches() * self.fig.dpi
             width, height = int(width), int(height)
@@ -189,6 +211,7 @@ class MapVisualizer:
         frame = frame.reshape(int(self.fig.get_figheight() * self.fig.dpi),
                               int(self.fig.get_figwidth() * self.fig.dpi), 3)
         self.video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
 
     def close_video(self):
         """Release the video writer."""

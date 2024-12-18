@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 use_cv2 = True
 
-def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
+def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False, _gt_init: bool = False):
     
     # ------------ Select frames for initialization ------------
     
@@ -23,7 +23,8 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     #I_2 = cv2.bilateralFilter(I_2, 5, 5, 20)
     
     # ------------ Establish keypoint correspondences ------------
-    # Find features in Frame 1 using Harris corner detection
+
+    # Find features in Frame 1 using Harris
     P_0 = cv2.goodFeaturesToTrack(image=I_0, mask=None, **ft_params)
     # Calculate the optical flow between frame 1 and 2
     P_1, matches_1_2, _ = cv2.calcOpticalFlowPyrLK(prevImg=I_0, nextImg=I_1, prevPts=P_0, nextPts=None, **klt_params)
@@ -92,10 +93,28 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False):
     M = K @ np.hstack((R, t))
 
     # Triangulate the points
-    points_4D = cv2.triangulatePoints(projMatr1=K @ np.eye(3,4),
-                                      projMatr2=M,
-                                      projPoints1=P_0_inliers.T, 
-                                      projPoints2=P_2_inliers.T)
+    if _gt_init:
+        # Use ground truth poses to initialize
+        pose_0 = frame_manager.get_ground_truth_pose(0)
+        pose_2 = frame_manager.get_ground_truth_pose(2)
+
+        # Convert poses to appropriate format
+        pose_0[:3, 3] = -pose_0[:3, :3].T @ pose_0[:3, 3]
+        pose_2[:3, 3] = -pose_2[:3, :3].T @ pose_2[:3, 3]
+
+        # Compute projection matrices
+        projMatrix1 = K @ pose_0[:3]
+        projMatrix2 = K @ pose_2[:3]
+    else:
+        projMatrix1 = K @ np.eye(3,4)
+        projMatrix2 = M
+
+    points_4D = cv2.triangulatePoints(
+        projMatr1=projMatrix1, 
+        projMatr2=projMatrix2, 
+        projPoints1=P_0_inliers.T, 
+        projPoints2=P_2_inliers.T
+    )
     points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
 
 
