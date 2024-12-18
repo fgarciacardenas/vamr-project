@@ -149,6 +149,7 @@ class MapVisualizer:
         last_n = 20
         trajectory_recent = self.trajectory[-last_n:] if len(self.trajectory) >= last_n else self.trajectory
         rotations_recent = self.rotations[-last_n:] if len(self.rotations) >= last_n else self.rotations
+        points_recent = self.points[-last_n:] if len(self.points) >= last_n else self.points
         if points_recent:
             x_vals = [p[0] for p in points_recent]
             z_vals = [p[2] for p in points_recent]  # Use Z values
