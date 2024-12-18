@@ -4,7 +4,7 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'parking'
+DATASET = 'kitti'
 DEBUG = True
 """
 Conventions:
@@ -246,12 +246,12 @@ def main():
         }
         # Update visualizer
         visualizer.add_points(X)
-        visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
+        visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = R, ground_truth=frame_manager.get_current_ground_truth())
         visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers, C_candidate)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 300:
+        if iFrame >= 60:
             break
 
     visualizer.close_video()
