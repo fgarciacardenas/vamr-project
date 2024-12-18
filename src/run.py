@@ -4,8 +4,8 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'parking'
-DEBUG = True
+DATASET = 'kitti'
+DEBUG = False
 """
 Conventions:
 - C: Candidate features
@@ -26,7 +26,8 @@ def main():
     K = frame_manager.K
     
     # Configure modules
-    ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
+    
+    ft_params = dict(maxCorners=100, qualityLevel=0.001, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
     angle_thr = np.deg2rad(2)
 
@@ -37,7 +38,8 @@ def main():
         klt_params=klt_params, 
         _debug=DEBUG
     )
-
+    
+    C_0 = P_0_inliers
     # Perfect initializer
     if DEBUG:
         # Use ground truth poses to initialize
@@ -251,7 +253,7 @@ def main():
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 300:
+        if iFrame >= 150:
             break
 
     visualizer.close_video()
