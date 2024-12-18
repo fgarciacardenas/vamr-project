@@ -98,7 +98,7 @@ def main():
     visualizer = MapVisualizer()
     visualizer.add_points(X_2)
     visualizer.add_pose(-cam_R.T@cam_t)
-    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers)
+    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers,C_0)
     visualizer.update_image(I_2)
     
     iFrame = 0
@@ -231,15 +231,14 @@ def main():
             "candidate_first_2D" : S_F,
             "candidate_first_camera_pose" : S_tau,
         }
-
         # Update visualizer
         visualizer.add_points(X)
         visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
-        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers)
+        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers,C_candidate)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 200:
+        if iFrame >= 30:
             break
 
     visualizer.close_video()

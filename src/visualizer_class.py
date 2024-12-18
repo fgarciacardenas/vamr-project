@@ -14,6 +14,7 @@ class MapVisualizer:
         self.image_points_green1 = None
         self.image_points_green2 = None
         self.image_points_red = None
+        self.harris_points = None
         self.output_dir = output_dir
         self.video_path = video_path
         self.video_writer = None
@@ -67,7 +68,7 @@ class MapVisualizer:
         if ground_truth is not None:
             self.ground_truth.append((ground_truth[0], ground_truth[1], ground_truth[2]))
 
-    def add_image_points(self, points_green1, points_green2, points_red):
+    def add_image_points(self, points_green1, points_green2, points_red,harris_points):
         """Add points to overlay on the image.
 
         Args:
@@ -78,6 +79,8 @@ class MapVisualizer:
         self.image_points_green1 = points_green1
         self.image_points_green2 = points_green2
         self.image_points_red = points_red
+        self.harris_points = harris_points
+
 
     def update_image(self, image):
         """Update the current image displayed in the plot.
@@ -109,7 +112,10 @@ class MapVisualizer:
             x_vals_red = [p[0] for p in self.image_points_red]
             y_vals_red = [p[1] for p in self.image_points_red]
             self.ax_image.scatter(x_vals_red, y_vals_red, c='r', marker='x', s=20)
-
+        if (self.harris_points is not None) and (len(self.harris_points) > 1):
+            x_vals_harris = [p[0] for p in self.harris_points]
+            y_vals_harris = [p[1] for p in self.harris_points]
+            self.ax_image.scatter(x_vals_harris, y_vals_harris, c='b', marker='x', s=20)
     def update_plot(self, frame_idx):
         """Update all subplots with the latest data and save the frame as an image and video."""
         # Update trajectory plot of the last 20 frames with landmarks
