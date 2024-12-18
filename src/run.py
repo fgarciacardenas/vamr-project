@@ -6,7 +6,17 @@ from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
 DEBUG = True
+"""
+Conventions:
+- C: Candidate features
+- F: First observation of the features
+- Tau: Camera pose when the feature was first observed
+- P: Inlier features
+- X: 3D points in the world frame
+- R: Rotation matrix that takes points from the world frame to the camera frame
+- t: Translation vector that takes points from the world frame to the camera frame
 
+"""
 def main():
     # Initialize FrameManager
     dataset_dir = {'kitti': 0, 'malaga': 1, 'parking': 2}
@@ -16,8 +26,8 @@ def main():
     K = frame_manager.K
     
     # Configure modules
-    ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
-    klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
+    ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=20, blockSize=5, k=0.04, useHarrisDetector=True)
+    klt_params = dict(winSize=(9, 9), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
 
     # Initialize position
     I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(
@@ -40,13 +50,13 @@ def main():
         pose_2[:3, 3] = -pose_2[:3, :3].T @ pose_2[:3, 3]
         
         # Extract features from the first image
-        ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=7, blockSize=7)
+        #ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=7, blockSize=7)
         C_0 = cv2.goodFeaturesToTrack(I_0, mask=None, **ft_params)
         C_0 = np.squeeze(C_0)
         
         # Track features to the third image
-        klt_params = dict(winSize=(21, 21), maxLevel=4,
-                          criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.01))
+        #klt_params = dict(winSize=(21, 21), maxLevel=4,
+                          #criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
         C_2, st, err = cv2.calcOpticalFlowPyrLK(I_0, I_2, C_0, None, **klt_params)
         st = st.flatten()
         
