@@ -158,14 +158,14 @@ class MapVisualizer:
             # Add local frame vectors
             for i, (x, z, R) in enumerate(zip(traj_x, traj_z, rotations_recent)):
                 if R is not None:
-                    scale = frame_idx*0.01  # Adjust for visualization scale
+                    scale = 1.5  # Adjust for visualization scale
                     vx, vz = R[:3, 0], R[:3, 2]  # Local frame x and z axes
 
                     # Plot Vx (local x-axis)
-                    self.ax_recent_trajectory.arrow(x, z, scale * vx[0], scale * vx[2], color='g', head_width=frame_idx*0.01, label='Vx' if i == 0 else "")
+                    self.ax_recent_trajectory.arrow(x, z, scale * vx[0], scale * vx[2], color='g', head_width=scale, label='Vx' if i == 0 else "")
 
                     # Plot Vz (local z-axis)
-                    self.ax_recent_trajectory.arrow(x, z, scale * vz[0], scale * vz[2], color='b', head_width=frame_idx*0.01, label='Vz' if i == 0 else "")
+                    self.ax_recent_trajectory.arrow(x, z, scale * vz[0], scale * vz[2], color='b', head_width=scale, label='Vz' if i == 0 else "")
 
         self.ax_full_trajectory.cla()
         self.ax_full_trajectory.set_title("Full Trajectory")
@@ -177,7 +177,23 @@ class MapVisualizer:
             traj_x_full = [p[0] for p in self.trajectory]
             traj_y_full = [p[2] for p in self.trajectory]
             self.ax_full_trajectory.plot(traj_x_full, traj_y_full, c='r')
+        if self.ground_truth:
+            gt_x_full = [p[0] for p in self.ground_truth]
+            gt_y_full = [p[2] for p in self.ground_truth]
+            self.ax_full_trajectory.plot(gt_x_full, gt_y_full, c='black')
 
+        x_center =traj_x[-1]
+        y_center =traj_z[-1]
+        self.ax_recent_trajectory.set_xlim([x_center - 50, x_center + 50])
+        self.ax_recent_trajectory.set_ylim([y_center - 50, y_center + 50])
+        # Update landmark count plot
+        self.ax_landmarks.cla()
+        self.ax_landmarks.set_title("# Tracked Landmarks Over Time")
+        self.ax_landmarks.set_xlabel('Frame')
+        self.ax_landmarks.set_ylabel('# Landmarks')
+
+        if self.landmark_counts:
+            self.ax_landmarks.plot(self.landmark_counts, c='g')
         frame_path = os.path.join(self.output_dir, f"frame_{frame_idx:04d}.png")
         self.fig.savefig(frame_path)
 
