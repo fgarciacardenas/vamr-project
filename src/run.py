@@ -18,6 +18,7 @@ def main():
     # Configure modules
     ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
+    angle_thr = np.deg2rad(2)
 
     # Initialize position
     I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(
@@ -40,13 +41,10 @@ def main():
         pose_2[:3, 3] = -pose_2[:3, :3].T @ pose_2[:3, 3]
         
         # Extract features from the first image
-        ft_params = dict(maxCorners=100, qualityLevel=0.01, minDistance=7, blockSize=7)
         C_0 = cv2.goodFeaturesToTrack(I_0, mask=None, **ft_params)
         C_0 = np.squeeze(C_0)
         
         # Track features to the third image
-        klt_params = dict(winSize=(21, 21), maxLevel=4,
-                          criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.01))
         C_2, st, err = cv2.calcOpticalFlowPyrLK(I_0, I_2, C_0, None, **klt_params)
         st = st.flatten()
         
@@ -98,7 +96,7 @@ def main():
     visualizer = MapVisualizer()
     visualizer.add_points(X_2)
     visualizer.add_pose(-cam_R.T@cam_t)
-    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers,C_0)
+    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers, C_0)
     visualizer.update_image(I_2)
     
     iFrame = 0
@@ -181,7 +179,7 @@ def main():
                                               S_tau=S_tau,
                                               R=next_pose[:3,:3],
                                               K=K,
-                                              threshold=0.3)
+                                              threshold=angle_thr)
 
             # Add inlier feature candidates not already in P
             member_and_alpha_mask = np.zeros(S_C.shape[0])
@@ -234,11 +232,11 @@ def main():
         # Update visualizer
         visualizer.add_points(X)
         visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3], ground_truth=frame_manager.get_current_ground_truth())
-        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers,C_candidate)
+        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers, C_candidate)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 30:
+        if iFrame >= 300:
             break
 
     visualizer.close_video()
