@@ -161,7 +161,7 @@ class MapVisualizer:
 
             # Add local frame vectors
             for i, (x, z, R) in enumerate(zip(traj_x, traj_z, rotations_recent)):
-                if R is not None:
+                if not np.allclose(R, np.eye(3)):
                     scale = 1.5  # Adjust for visualization scale
                     vx, vz = R[:3, 0], R[:3, 2]  # Local frame x and z axes
 
@@ -188,8 +188,8 @@ class MapVisualizer:
 
         x_center =traj_x[-1]
         y_center =traj_z[-1]
-        self.ax_recent_trajectory.set_xlim([x_center - 50, x_center + 50])
-        self.ax_recent_trajectory.set_ylim([y_center - 50, y_center + 50])
+        self.ax_recent_trajectory.set_xlim([x_center - 20, x_center + 20])
+        self.ax_recent_trajectory.set_ylim([y_center - 20, y_center + 20])
         # Update landmark count plot
         self.ax_landmarks.cla()
         self.ax_landmarks.set_title("# Tracked Landmarks Over Time")

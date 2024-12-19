@@ -5,7 +5,11 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
+<<<<<<< HEAD
 DEBUG = False
+=======
+DEBUG = True
+>>>>>>> refs/remotes/origin/perfect-initializer
 GT_INIT = False
 
 """
@@ -41,6 +45,7 @@ def main():
     K = frame_manager.K
     
     # Configure modules
+<<<<<<< HEAD
     ft_params = dict(
         maxCorners=100, 
         qualityLevel=dataset_dir[DATASET]['quality'], 
@@ -48,6 +53,10 @@ def main():
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
+=======
+    
+    ft_params = dict(maxCorners=100, qualityLevel=0.001, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
+>>>>>>> refs/remotes/origin/perfect-initializer
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
     angle_thr = np.deg2rad(2)
 
@@ -59,7 +68,6 @@ def main():
         _debug=DEBUG,
         _gt_init = GT_INIT
     )
-    
 
     # Initialize current state dictionary
     current_state = {
@@ -70,16 +78,14 @@ def main():
         "candidate_first_camera_pose" : None,
     }
 
-    pose_arr = []
-    pose_arr.append(np.eye(4)) # Starting position
-
+    # Get starting position
+    pose_arr = [np.eye(4)]
     pose_arr.append(np.vstack((np.hstack((cam_R, cam_t)),
                                 np.array([0,0,0,1]))))
     
     # Initialize visualizer
     visualizer = MapVisualizer()
     visualizer.add_points(X_2)
-    visualizer.add_pose(np.zeros(3))
     visualizer.add_pose(-cam_R.T@cam_t)
     visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers, P_0_inliers)
     visualizer.update_image(I_2)
@@ -221,12 +227,16 @@ def main():
         }
         # Update visualizer
         visualizer.add_points(X)
-        visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = R, ground_truth=frame_manager.get_current_ground_truth())
+        if iFrame%10 == 0:
+            print("adding arrows")
+            visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = R, ground_truth=frame_manager.get_current_ground_truth())
+        else:
+            visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = np.eye(3), ground_truth=frame_manager.get_current_ground_truth())
         visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers, C_candidate)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 300:
+        if iFrame >= 60:
             break
 
     visualizer.close_video()
