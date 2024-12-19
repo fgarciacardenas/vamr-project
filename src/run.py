@@ -5,11 +5,7 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
-<<<<<<< HEAD
 DEBUG = False
-=======
-DEBUG = True
->>>>>>> refs/remotes/origin/perfect-initializer
 GT_INIT = False
 
 """
@@ -45,7 +41,6 @@ def main():
     K = frame_manager.K
     
     # Configure modules
-<<<<<<< HEAD
     ft_params = dict(
         maxCorners=100, 
         qualityLevel=dataset_dir[DATASET]['quality'], 
@@ -53,10 +48,6 @@ def main():
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
-=======
-    
-    ft_params = dict(maxCorners=100, qualityLevel=0.001, minDistance=20, blockSize=3, k=0.04, useHarrisDetector=True)
->>>>>>> refs/remotes/origin/perfect-initializer
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
     angle_thr = np.deg2rad(2)
 
