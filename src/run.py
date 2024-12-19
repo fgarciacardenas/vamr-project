@@ -4,7 +4,7 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'parking'
+DATASET = 'kitti'
 DEBUG = True
 GT_INIT = True
 

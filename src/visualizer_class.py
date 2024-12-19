@@ -200,6 +200,7 @@ class MapVisualizer:
             self.ax_landmarks.plot(self.landmark_counts, c='g')
         frame_path = os.path.join(self.output_dir, f"frame_{frame_idx:04d}.png")
         self.fig.savefig(frame_path)
+        self.fig.savefig(os.path.join(self.output_dir, f"_movie.png"))
 
         if self.video_writer is None:
             width, height = self.fig.get_size_inches() * self.fig.dpi
