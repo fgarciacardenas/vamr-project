@@ -116,8 +116,6 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False, _g
     )
     points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
 
-
-    _debug = True
     # Print debug outputs
     if _debug:
         print(f"Number of matches (KLT): {np.sum(matches_2_3)} out of {len(P_0)}")

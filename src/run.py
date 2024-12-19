@@ -5,7 +5,7 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
-DEBUG = False
+DEBUG = True
 GT_INIT = False
 
 """
@@ -24,18 +24,45 @@ def main():
     dataset_dir = {
         'kitti': {
             'index': 0,
-            'quality': 0.005,
-            'distance': 30,
+            'alpha': np.deg2rad(2),
+            'initializer': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            },
+            'running': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            }
         }, 
         'malaga': {
             'index': 1,
-            'quality': 0.005,
-            'distance': 30,
+            'alpha': np.deg2rad(2),
+            'initializer': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            },
+            'running': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            }
         },  
         'parking': {
             'index': 2,
-            'quality': 0.001,
-            'distance': 30,
+            'alpha': np.deg2rad(2),
+            'initializer': {
+                'quality': 0.001,
+                'distance': 30,
+                'max_corners': 100,
+            },
+            'running': {
+                'quality': 0.001,
+                'distance': 30,
+                'max_corners': 100,
+            }
         }
     }
     frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET]['index'], bootstrap_frames=[0, 1])
@@ -44,20 +71,26 @@ def main():
     K = frame_manager.K
     
     # Configure modules
-    ft_params = dict(
-        maxCorners=100, 
-        qualityLevel=dataset_dir[DATASET]['quality'], 
-        minDistance=dataset_dir[DATASET]['distance'], 
+    ft_params_init = dict(
+        maxCorners=dataset_dir[DATASET]['initializer']['max_corners'], 
+        qualityLevel=dataset_dir[DATASET]['initializer']['quality'], 
+        minDistance=dataset_dir[DATASET]['initializer']['distance'], 
+        blockSize=3, 
+        k=0.04, 
+        useHarrisDetector=True)
+    ft_params_run = dict(
+        maxCorners=dataset_dir[DATASET]['running']['max_corners'], 
+        qualityLevel=dataset_dir[DATASET]['running']['quality'], 
+        minDistance=dataset_dir[DATASET]['running']['distance'], 
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
-    angle_thr = np.deg2rad(2)
 
     # Initialize position
     I_2, P_0_inliers, P_2_inliers, P_0_outliers, X_2, cam_R, cam_t = initialize_vo(
         frame_manager=frame_manager, 
-        ft_params=ft_params, 
+        ft_params=ft_params_init, 
         klt_params=klt_params, 
         _debug=DEBUG,
         _gt_init = GT_INIT
@@ -80,6 +113,7 @@ def main():
     # Initialize visualizer
     visualizer = MapVisualizer()
     visualizer.add_points(X_2)
+    visualizer.add_pose(np.zeros(3))
     visualizer.add_pose(-cam_R.T@cam_t)
     visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers, P_0_inliers)
     visualizer.update_image(I_2)
@@ -135,7 +169,7 @@ def main():
         C_candidate, F_candidate, Tau_candidate = ComputeCandidates(
             I=I_curr, 
             T=next_pose, 
-            ft_params=ft_params
+            ft_params=ft_params_run
         )
 
         # Generate feature tracks
@@ -164,7 +198,7 @@ def main():
                                               S_tau=S_tau,
                                               R=next_pose[:3,:3],
                                               K=K,
-                                              threshold=angle_thr)
+                                              threshold=dataset_dir[DATASET]['alpha'])
 
             # Add inlier feature candidates not already in P
             member_and_alpha_mask = np.zeros(S_C.shape[0])
@@ -230,8 +264,8 @@ def main():
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        if iFrame >= 60:
-            break
+        #if iFrame >= 60:
+        #    break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")
