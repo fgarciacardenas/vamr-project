@@ -4,7 +4,7 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'kitti'
+DATASET = 'parking'
 DEBUG = False
 GT_INIT = False
 
@@ -21,15 +21,33 @@ Conventions:
 
 def main():
     # Initialize FrameManager
-    dataset_dir = {'kitti': 0, 'malaga': 1, 'parking': 2}
-    frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET], bootstrap_frames=[0, 1])
+    dataset_dir = {
+        'kitti': {
+            'index': 0,
+            'quality': 0.005
+        }, 
+        'malaga': {
+            'index': 1,
+            'quality': 0.005
+        },  
+        'parking': {
+            'index': 2,
+            'quality': 0.001
+        }
+    }
+    frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET]['index'], bootstrap_frames=[0, 1])
     
     # Load K matrix
     K = frame_manager.K
     
     # Configure modules
-    
-    ft_params = dict(maxCorners=100, qualityLevel=0.005, minDistance=30, blockSize=3, k=0.04, useHarrisDetector=True)
+    ft_params = dict(
+        maxCorners=100, 
+        qualityLevel=dataset_dir[DATASET]['quality'], 
+        minDistance=30, 
+        blockSize=3, 
+        k=0.04, 
+        useHarrisDetector=True)
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
     angle_thr = np.deg2rad(2)
 
