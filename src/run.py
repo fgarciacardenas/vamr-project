@@ -24,15 +24,18 @@ def main():
     dataset_dir = {
         'kitti': {
             'index': 0,
-            'quality': 0.005
+            'quality': 0.005,
+            'distance': 30,
         }, 
         'malaga': {
             'index': 1,
-            'quality': 0.005
+            'quality': 0.005,
+            'distance': 30,
         },  
         'parking': {
             'index': 2,
-            'quality': 0.001
+            'quality': 0.001,
+            'distance': 30,
         }
     }
     frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET]['index'], bootstrap_frames=[0, 1])
@@ -44,7 +47,7 @@ def main():
     ft_params = dict(
         maxCorners=100, 
         qualityLevel=dataset_dir[DATASET]['quality'], 
-        minDistance=30, 
+        minDistance=dataset_dir[DATASET]['distance'], 
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
@@ -218,8 +221,8 @@ def main():
         }
         # Update visualizer
         visualizer.add_points(X)
-        if iFrame%10 == 0:
-            print("adding arrows")
+        if (iFrame % 10 == 0):
+            print("Plotting camera frame...")
             visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = R, ground_truth=frame_manager.get_current_ground_truth())
         else:
             visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = np.eye(3), ground_truth=frame_manager.get_current_ground_truth())
