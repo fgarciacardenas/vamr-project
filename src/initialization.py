@@ -67,7 +67,6 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False, _g
     # Estimate the essential matrix
     K = frame_manager.get_intrinsic_params()
     E, mask = cv2.findEssentialMat(points1=P_0_inliers, points2=P_2_inliers, cameraMatrix=K, method=cv2.RANSAC, prob=0.999, threshold=1.0)
-    E = -E
     
     # Select inlier points
     P_0_inliers = P_0_inliers[mask.ravel() == 1]
