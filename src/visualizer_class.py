@@ -173,21 +173,24 @@ class MapVisualizer:
             # Add local frame vectors
             for i, (x, z, R) in enumerate(zip(traj_x, traj_z, rotations_recent)):
                 if not np.allclose(R, np.eye(3)):
-                    scale = 1.5  # Adjust for visualization scale
+                    scale_recent_trajectory = 1.5  # Adjust for visualization scale
+                    scale_full_trajectory = 0.5  # Adjust for visualization scale
                     vx, vz = R[:3, 0], R[:3, 2]  # Local frame x and z axes
 
                     # Plot Vx (local x-axis)
-                    self.ax_recent_trajectory.arrow(x, z, scale * vx[0], scale * vx[2], color='g', head_width=scale, label='Vx' if i == 0 else "")
+                    self.ax_recent_trajectory.arrow(x, z, scale_recent_trajectory * vx[0], scale_recent_trajectory * vx[2], color='g', head_width=scale_recent_trajectory, label='Vx' if i == 0 else "")
+                    #plot Vx (local x-axis on the ax_full_trajectory)
 
                     # Plot Vz (local z-axis)
-                    self.ax_recent_trajectory.arrow(x, z, scale * vz[0], scale * vz[2], color='b', head_width=scale, label='Vz' if i == 0 else "")
-
+                    self.ax_recent_trajectory.arrow(x, z, scale_recent_trajectory * vz[0], scale_recent_trajectory * vz[2], color='b', head_width=scale_recent_trajectory, label='Vz' if i == 0 else "")
+                   
+        #update full trajectory
         self.ax_full_trajectory.cla()
         self.ax_full_trajectory.set_title("Full Trajectory")
         self.ax_full_trajectory.set_xlabel('X')
         self.ax_full_trajectory.set_ylabel('Z')
         self.ax_full_trajectory.set_aspect('equal', adjustable='datalim')
-
+        
         if self.trajectory:
             traj_x_full = [p[0] for p in self.trajectory]
             traj_y_full = [p[2] for p in self.trajectory]
@@ -196,11 +199,39 @@ class MapVisualizer:
             gt_x_full = [p[0] for p in self.ground_truth]
             gt_y_full = [p[2] for p in self.ground_truth]
             self.ax_full_trajectory.plot(gt_x_full, gt_y_full, c='black')
+        for i, (x, z, R) in enumerate(zip(traj_x_full, traj_y_full, self.rotations)):
+            if not np.allclose(R, np.eye(3)):
+                scale_full_trajectory = 0.5
+                vx = R[:3, 0]  # local x-axis
+                vz = R[:3, 2]  # local z-axis
 
+                self.ax_full_trajectory.arrow(
+                    x,
+                    z,
+                    scale_full_trajectory * vx[0],
+                    scale_full_trajectory * vx[2],
+                    color='g',
+                    head_width=scale_full_trajectory,
+                    label='Vx' if i == 0 else ""
+                )
+                self.ax_full_trajectory.arrow(
+                    x,
+                    z,
+                    scale_full_trajectory * vz[0],
+                    scale_full_trajectory * vz[2],
+                    color='b',
+                    head_width=scale_full_trajectory,
+                    label='Vz' if i == 0 else ""
+                )
         x_center =traj_x[-1]
         y_center =traj_z[-1]
         self.ax_recent_trajectory.set_xlim([x_center - 20, x_center + 20])
         self.ax_recent_trajectory.set_ylim([y_center - 20, y_center + 20])
+
+        
+
+
+
         # Update landmark count plot
         self.ax_landmarks.cla()
         self.ax_landmarks.set_title("# Tracked Landmarks Over Time")
