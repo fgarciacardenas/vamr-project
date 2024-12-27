@@ -14,6 +14,7 @@ class MapVisualizer:
         self.image_points_green1 = None
         self.image_points_green2 = None
         self.image_points_red = None
+        self.image_points_blue = None
         self.rotations = []
         self.harris_points = None
         self.output_dir = output_dir
@@ -102,18 +103,28 @@ class MapVisualizer:
             x_vals_harris = [p[0] for p in self.harris_points]
             y_vals_harris = [p[1] for p in self.harris_points]
             self.ax_image.scatter(x_vals_harris, y_vals_harris, c='b', marker='x', s=20)
-    def add_image_points(self, points_green1, points_green2, points_red,harris_points):
+        
+        # Overlay blue crosses on the image
+        if (self.image_points_blue is not None) and (len(self.image_points_blue) > 1):
+            x_vals_blue = [p[0] for p in self.image_points_blue]
+            y_vals_blue = [p[1] for p in self.image_points_blue]
+            self.ax_image.scatter(x_vals_blue, y_vals_blue, c='b', marker='x', s=20)
+
+    def add_image_points(self, points_green1, points_green2, points_red, harris_points, points_blue):
         """Add points to overlay on the image.
 
         Args:
             points_green1 (list of tuples): First set of (x, y) coordinates for green crosses.
             points_green2 (list of tuples): Second set of (x, y) coordinates for green crosses.
             points_red (list of tuples): List of (x, y) coordinates for red crosses.
+            harris_points (list of tuples): List of (x, y) coordinates for harris points.
+            points_blue (list of tuples): List of (x, y) coordinates for blue crosses.
         """
         self.image_points_green1 = points_green1
         self.image_points_green2 = points_green2
         self.image_points_red = points_red
         self.harris_points = harris_points
+        self.image_points_blue = points_blue
 
 
     def add_pose(self, pose, R=None, ground_truth=None):

@@ -5,7 +5,8 @@ from utils import track_candidates
 from visualizer_class import MapVisualizer
 
 DATASET = 'parking'
-DEBUG = True
+DEBUG = False
+DEBUG_CANDIDATES = True
 GT_INIT = False
 
 """
@@ -31,9 +32,9 @@ def main():
                 'max_corners': 100,
             },
             'running': {
-                'quality': 0.005,
-                'distance': 30,
-                'max_corners': 100,
+                'quality': 0.01,
+                'distance': 15,
+                'max_corners': 50,
             }
         }, 
         'malaga': {
@@ -45,9 +46,9 @@ def main():
                 'max_corners': 100,
             },
             'running': {
-                'quality': 0.005,
-                'distance': 30,
-                'max_corners': 100,
+                'quality': 0.01,
+                'distance': 15,
+                'max_corners': 50,
             }
         },  
         'parking': {
@@ -60,8 +61,8 @@ def main():
             },
             'running': {
                 'quality': 0.001,
-                'distance': 30,
-                'max_corners': 100,
+                'distance': 50,
+                'max_corners': 50,
             }
         }
     }
@@ -115,7 +116,7 @@ def main():
     visualizer.add_points(X_2)
     visualizer.add_pose(np.zeros(3))
     visualizer.add_pose(-cam_R.T@cam_t)
-    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers, P_0_inliers)
+    visualizer.add_image_points(P_0_inliers, P_2_inliers, P_0_outliers, P_0_inliers, None)
     visualizer.update_image(I_2)
     
     iFrame = 0
@@ -151,15 +152,18 @@ def main():
 
         # Compute 3D-2D correspondences
         X, P_1_inliers, R, t, rs_inliers = ransac_pnp_pose_estimation(
-            X_3D=X, 
+            X_3D=X,
             P_2D=P_1_klt, 
             K=K
         )
 
         # Compute KLT visualization
-        P_0_inliers = previous_state['keypoints_2D'][matches == 1]
-        P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]])
-        P_0_inliers = P_0_inliers[rs_inliers]
+        P_0_inliers = previous_state['keypoints_2D'][matches == 1] # Inliers from KLT tracking
+        P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], # Outliers from KLT tracking
+                                       P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]]) # Outliers from PnP 
+        # TODO: Check if this is correct, would P_0_inliers[rs_inliers == 0] do the same?
+        
+        P_0_inliers = P_0_inliers[rs_inliers] # Inliers from PnP
 
         next_pose = np.vstack((np.hstack((R, t)),
                                np.array([0,0,0,1])))
@@ -171,6 +175,18 @@ def main():
             T=next_pose, 
             ft_params=ft_params_run
         )
+        
+        # Make sure the candidate features are not already in P (saves them from KLT)
+        c_duplicate_mask = []
+        for i, new_C in enumerate(C_candidate):
+            # TODO: this function doesn't take advantage of the geometry and is O(N^2), we can make it O(NlogN)
+            is_member = np.any(np.all(np.isclose(new_C, P_1_inliers, rtol=5e-3, atol=1e-1), axis=1)) 
+            if not is_member:
+                c_duplicate_mask.append(i)
+                
+        C_candidate = C_candidate[c_duplicate_mask]
+        F_candidate = F_candidate[c_duplicate_mask]
+        Tau_candidate = Tau_candidate[c_duplicate_mask]
 
         # Generate feature tracks
         if previous_state["candidate_2D"] is not None:
@@ -200,38 +216,56 @@ def main():
                                               K=K,
                                               threshold=dataset_dir[DATASET]['alpha'])
 
-            # Add inlier feature candidates not already in P
-            member_and_alpha_mask = np.zeros(S_C.shape[0])
-            for i, C in enumerate(S_C):
-                if not cur_C_to_P_mask[i]:
-                    continue
-                is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=5e-3, atol=1e-1), axis=1))
-                if not is_member:
-                    member_and_alpha_mask[i] = 1
-            if sum(member_and_alpha_mask):
-                C_inlier = S_C[member_and_alpha_mask == 1]
-                S_F_inlier = S_F[member_and_alpha_mask == 1]
-                S_tau_inlier = S_tau[member_and_alpha_mask == 1]
+            # Extract inliers
+            C_inlier = S_C[cur_C_to_P_mask]
+            S_F_inlier = S_F[cur_C_to_P_mask]
+            S_tau_inlier = S_tau[cur_C_to_P_mask]
+            
+            ## Add inlier feature candidates not already in P
+            #member_and_alpha_mask = np.zeros(S_C.shape[0])
+            #for i, C in enumerate(S_C):
+            #    if not cur_C_to_P_mask[i]:
+            #        continue
+            #    is_member = np.any(np.all(np.isclose(P_1_inliers, C, rtol=5e-3, atol=1e-1), axis=1))
+            #    if not is_member:
+            #        member_and_alpha_mask[i] = 1
+            #if sum(member_and_alpha_mask):
+            #    C_inlier = S_C[member_and_alpha_mask == 1]
+            #    S_F_inlier = S_F[member_and_alpha_mask == 1]
+            #    S_tau_inlier = S_tau[member_and_alpha_mask == 1]
 
-                # Triangulate inlier points
-                points_4D = []
-                for can, first,tau in zip(C_inlier, S_F_inlier, S_tau_inlier):
-                    points_4D.append(cv2.triangulatePoints(
-                        projMatr1=K @ tau[:3],
-                        projMatr2=K @ next_pose[:3], 
-                        projPoints1=first, 
-                        projPoints2=can
-                    ))
-                points_4D = np.array(points_4D).T
-                points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
-                # Update P and X using valid candidates
-                P_1_inliers = np.vstack([P_1_inliers, C_inlier])
-                X = np.vstack([X, points_3D])
+            # Triangulate inlier points
+            points_4D_list = []
+            
+            for can, first,tau in zip(C_inlier, S_F_inlier, S_tau_inlier):
+                points_4D_list.append(cv2.triangulatePoints(
+                    projMatr1=K @ tau[:3],
+                    projMatr2=K @ next_pose[:3], 
+                    projPoints1=first, 
+                    projPoints2=can
+                ))
+            
+            ## Stack next_poses to match the shape of S_tau_inlier
+            #next_pose_stack = np.tile(next_pose[:3], (S_tau_inlier.shape[0], 1, 1))
+            #proj_matrix1_stack = (K @ S_tau_inlier[:, :3]).transpose(1, 2, 0) 
+            #proj_matrix2_stack = (K @ next_pose_stack[:3]).transpose(1, 2, 0)
+            #points_4D = cv2.triangulatePoints(
+            #    projMatr1=proj_matrix1_stack,
+            #    projMatr2=proj_matrix2_stack, 
+            #    projPoints1=S_F_inlier, 
+            #    projPoints2=C_inlier
+            #)
+            #
+            points_4D = np.array(points_4D_list).T
+            points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
+            # Update P and X using valid candidates
+            P_1_inliers = np.vstack([P_1_inliers, C_inlier])
+            X = np.vstack([X, points_3D])
 
             # Track point that did not pass the alpha threshold
-            S_C = S_C[member_and_alpha_mask == 0]
-            S_F = S_F[member_and_alpha_mask == 0]
-            S_tau = S_tau[member_and_alpha_mask == 0]
+            S_C = S_C[cur_C_to_P_mask == 0]
+            S_F = S_F[cur_C_to_P_mask == 0]
+            S_tau = S_tau[cur_C_to_P_mask == 0]
 
             # Append feature candidates
             c_duplicate_mask = []
@@ -242,7 +276,10 @@ def main():
             S_C = np.vstack([S_C, C_candidate[c_duplicate_mask]])
             S_F = np.vstack([S_F, F_candidate[c_duplicate_mask]])
             S_tau = np.vstack([S_tau, Tau_candidate[c_duplicate_mask]])
-
+                              
+            if DEBUG_CANDIDATES:
+                # Visualize candidates
+                visualizer.add_image_points(None, None, None, None, S_C)
         else:
             S_C, S_F, S_tau = C_candidate, F_candidate, Tau_candidate
 
@@ -253,6 +290,8 @@ def main():
             "candidate_first_2D" : S_F,
             "candidate_first_camera_pose" : S_tau,
         }
+                
+        
         # Update visualizer
         visualizer.add_points(X)
         if (iFrame % 10 == 0):
@@ -260,11 +299,11 @@ def main():
             visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = R, ground_truth=frame_manager.get_current_ground_truth())
         else:
             visualizer.add_pose(-next_pose[:3,:3].T@next_pose[:3,3],R = np.eye(3), ground_truth=frame_manager.get_current_ground_truth())
-        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers, C_candidate)
+        visualizer.add_image_points(P_0_inliers, P_1_inliers, P_0_outliers, C_candidate, None)
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        #if iFrame >= 60:
+        #if iFrame >= 100:
         #    break
 
     visualizer.close_video()
@@ -272,3 +311,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
