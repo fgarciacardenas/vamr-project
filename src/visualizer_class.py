@@ -175,6 +175,7 @@ class MapVisualizer:
                 if not np.allclose(R, np.eye(3)):
                     scale_recent_trajectory = 1.5  # Adjust for visualization scale
                     scale_full_trajectory = 0.5  # Adjust for visualization scale
+                    R = np.linalg.inv(R)  # Convert from world to local frame
                     vx, vz = R[:3, 0], R[:3, 2]  # Local frame x and z axes
 
                     # Plot Vx (local x-axis)

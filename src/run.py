@@ -4,7 +4,7 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'parking'
+DATASET = 'kitti'
 DEBUG = False
 DEBUG_CANDIDATES = True
 GT_INIT = False
@@ -25,16 +25,26 @@ def main():
     dataset_dir = {
         'kitti': {
             'index': 0,
-            'alpha': np.deg2rad(2),
+            'alpha': np.deg2rad(1.5),
             'initializer': {
                 'quality': 0.005,
-                'distance': 30,
-                'max_corners': 100,
+                'distance': 20,
+                'max_corners': 300,
             },
-            'running': {
+            'running_very_high_quality': {
                 'quality': 0.01,
                 'distance': 15,
-                'max_corners': 50,
+                'max_corners': 40,
+            },
+            'running_high_quality': {
+                'quality': 0.005,
+                'distance': 20,
+                'max_corners': 150,
+            },
+            'running_sparse': {
+                'quality': 0.0005,
+                'distance': 30,
+                'max_corners': 40,
             }
         }, 
         'malaga': {
@@ -45,9 +55,19 @@ def main():
                 'distance': 30,
                 'max_corners': 100,
             },
-            'running': {
+            'running_very_high_quality': {
                 'quality': 0.01,
                 'distance': 15,
+                'max_corners': 50,
+            },
+            'running_high_quality': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            },
+            'running_sparse': {
+                'quality': 0.001,
+                'distance': 10,
                 'max_corners': 50,
             }
         },  
@@ -59,7 +79,17 @@ def main():
                 'distance': 30,
                 'max_corners': 100,
             },
-            'running': {
+            'running_very_high_quality': {
+                'quality': 0.001,
+                'distance': 10,
+                'max_corners': 50,
+            },
+            'running_high_quality': {
+                'quality': 0.005,
+                'distance': 30,
+                'max_corners': 100,
+            },
+            'running_sparse': {
                 'quality': 0.001,
                 'distance': 50,
                 'max_corners': 50,
@@ -79,13 +109,28 @@ def main():
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
-    ft_params_run = dict(
-        maxCorners=dataset_dir[DATASET]['running']['max_corners'], 
-        qualityLevel=dataset_dir[DATASET]['running']['quality'], 
-        minDistance=dataset_dir[DATASET]['running']['distance'], 
+    ft_params_run_vhq = dict(
+        maxCorners=dataset_dir[DATASET]['running_very_high_quality']['max_corners'], 
+        qualityLevel=dataset_dir[DATASET]['running_very_high_quality']['quality'], 
+        minDistance=dataset_dir[DATASET]['running_very_high_quality']['distance'], 
         blockSize=3, 
         k=0.04, 
         useHarrisDetector=True)
+    ft_params_run_hq = dict(
+        maxCorners=dataset_dir[DATASET]['running_high_quality']['max_corners'], 
+        qualityLevel=dataset_dir[DATASET]['running_high_quality']['quality'], 
+        minDistance=dataset_dir[DATASET]['running_high_quality']['distance'], 
+        blockSize=3, 
+        k=0.04, 
+        useHarrisDetector=True)
+    ft_params_run_sparse = dict(
+        maxCorners=dataset_dir[DATASET]['running_sparse']['max_corners'],
+        qualityLevel=dataset_dir[DATASET]['running_sparse']['quality'],
+        minDistance=dataset_dir[DATASET]['running_sparse']['distance'],
+        blockSize=3,
+        k=0.04,
+        useHarrisDetector=True)
+        
     klt_params = dict(winSize=(21, 21), maxLevel=4, criteria=(cv2.TERM_CRITERIA_COUNT + cv2.TERM_CRITERIA_EPS, 30, 0.001))
 
     # Initialize position
@@ -170,6 +215,13 @@ def main():
         pose_arr.append(next_pose)
 
         # Compute feature candidates
+        if iFrame % 2 == 0:
+            ft_params_run = ft_params_run_hq
+        elif iFrame % 4 == 1:
+            ft_params_run = ft_params_run_vhq
+        else:
+            ft_params_run = ft_params_run_sparse
+            
         C_candidate, F_candidate, Tau_candidate = ComputeCandidates(
             I=I_curr, 
             T=next_pose, 
@@ -187,7 +239,7 @@ def main():
         C_candidate = C_candidate[c_duplicate_mask]
         F_candidate = F_candidate[c_duplicate_mask]
         Tau_candidate = Tau_candidate[c_duplicate_mask]
-
+        
         # Generate feature tracks
         if previous_state["candidate_2D"] is not None:
             
@@ -257,10 +309,12 @@ def main():
             #)
             #
             points_4D = np.array(points_4D_list).T
-            points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
+            # Only add the points if not empty
+            if points_4D.size != 0:
+                points_3D = cv2.convertPointsFromHomogeneous(src=points_4D.T).squeeze()
+                X = np.vstack([X, points_3D])
             # Update P and X using valid candidates
             P_1_inliers = np.vstack([P_1_inliers, C_inlier])
-            X = np.vstack([X, points_3D])
 
             # Track point that did not pass the alpha threshold
             S_C = S_C[cur_C_to_P_mask == 0]
