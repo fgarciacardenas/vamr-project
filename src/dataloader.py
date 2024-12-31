@@ -24,6 +24,7 @@ def load_ground_truth_parking(parking_path):
 def read_image(path, grayscale=True):
     if grayscale:
         image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        #image = cv2.equalizeHist(image) #equalize the image
     else:
         image = cv2.imread(path, cv2.IMREAD_COLOR)
     
