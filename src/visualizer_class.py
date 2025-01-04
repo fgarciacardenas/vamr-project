@@ -75,11 +75,29 @@ class MapVisualizer:
         Args:
             image (ndarray): Grayscale image to display.
         """
-        self.ax_image.cla()
+        """self.ax_image.cla()
         self.ax_image.set_title("Current Image")
         self.ax_image.imshow(image, cmap='gray')
         self.ax_image.axis('off')
+        """
+        # Verify if there is an image already visualized
+        if not hasattr(self, 'image_display'):
+            # Visualize the initial image
+            self.image_display = self.ax_image.imshow(image, cmap='gray')
+            self.ax_image.set_title("Current Image")
+            self.ax_image.axis('off')
+        else:
+            # Update the image without drawing the entire axis
+            self.image_display.set_data(image)
+            for collection in self.ax_image.collections:
+                collection.remove()
+            for line in self.ax_image.lines:
+                line.remove()
 
+        # Maintain the axis limits fixed
+        self.ax_image.set_xlim(0, image.shape[1])
+        self.ax_image.set_ylim(image.shape[0], 0)
+        
         # Overlay green crosses and lines on the image
         if (self.image_points_green1 is not None) and (self.image_points_green2 is not None) and \
            (len(self.image_points_green1) > 1) and (len(self.image_points_green2) > 1):
@@ -109,7 +127,7 @@ class MapVisualizer:
             x_vals_blue = [p[0] for p in self.image_points_blue]
             y_vals_blue = [p[1] for p in self.image_points_blue]
             self.ax_image.scatter(x_vals_blue, y_vals_blue, c='b', marker='x', s=20)
-
+        
     def add_image_points(self, points_green1, points_green2, points_red, harris_points, points_blue):
         """Add points to overlay on the image.
 
@@ -160,7 +178,7 @@ class MapVisualizer:
         last_n = 20
         trajectory_recent = self.trajectory[-last_n:] if len(self.trajectory) >= last_n else self.trajectory
         rotations_recent = self.rotations[-last_n:] if len(self.rotations) >= last_n else self.rotations
-        points_recent = self.points[-last_n:] if len(self.points) >= last_n else self.points
+        points_recent = self.points[-self.landmark_counts[-1]:] if len(self.points) >= self.landmark_counts[-1] else self.points
         if points_recent:
             x_vals = [p[0] for p in points_recent]
             z_vals = [p[2] for p in points_recent]  # Use Z values
@@ -203,6 +221,7 @@ class MapVisualizer:
         for i, (x, z, R) in enumerate(zip(traj_x_full, traj_y_full, self.rotations)):
             if not np.allclose(R, np.eye(3)):
                 scale_full_trajectory = 0.5
+                R = np.linalg.inv(R)  # Convert from world to local frame
                 vx = R[:3, 0]  # local x-axis
                 vz = R[:3, 2]  # local z-axis
 
@@ -228,10 +247,6 @@ class MapVisualizer:
         y_center =traj_z[-1]
         self.ax_recent_trajectory.set_xlim([x_center - 20, x_center + 20])
         self.ax_recent_trajectory.set_ylim([y_center - 20, y_center + 20])
-
-        
-
-
 
         # Update landmark count plot
         self.ax_landmarks.cla()
