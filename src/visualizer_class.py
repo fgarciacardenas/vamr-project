@@ -80,23 +80,24 @@ class MapVisualizer:
         self.ax_image.imshow(image, cmap='gray')
         self.ax_image.axis('off')
         """
-        # Controlla se c'è già un'immagine visualizzata
+        # Verify if there is an image already visualized
         if not hasattr(self, 'image_display'):
-            # Visualizza l'immagine iniziale
+            # Visualize the initial image
             self.image_display = self.ax_image.imshow(image, cmap='gray')
             self.ax_image.set_title("Current Image")
             self.ax_image.axis('off')
         else:
-            # Aggiorna l'immagine senza ridisegnare l'intero asse
+            # Update the image without drawing the entire axis
             self.image_display.set_data(image)
             for collection in self.ax_image.collections:
                 collection.remove()
             for line in self.ax_image.lines:
                 line.remove()
 
-        # Mantieni i limiti degli assi fissi
+        # Maintain the axis limits fixed
         self.ax_image.set_xlim(0, image.shape[1])
         self.ax_image.set_ylim(image.shape[0], 0)
+        
         # Overlay green crosses and lines on the image
         if (self.image_points_green1 is not None) and (self.image_points_green2 is not None) and \
            (len(self.image_points_green1) > 1) and (len(self.image_points_green2) > 1):
@@ -245,10 +246,6 @@ class MapVisualizer:
         y_center =traj_z[-1]
         self.ax_recent_trajectory.set_xlim([x_center - 20, x_center + 20])
         self.ax_recent_trajectory.set_ylim([y_center - 20, y_center + 20])
-
-        
-
-
 
         # Update landmark count plot
         self.ax_landmarks.cla()
