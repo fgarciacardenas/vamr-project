@@ -75,11 +75,28 @@ class MapVisualizer:
         Args:
             image (ndarray): Grayscale image to display.
         """
-        self.ax_image.cla()
+        """self.ax_image.cla()
         self.ax_image.set_title("Current Image")
         self.ax_image.imshow(image, cmap='gray')
         self.ax_image.axis('off')
+        """
+        # Controlla se c'è già un'immagine visualizzata
+        if not hasattr(self, 'image_display'):
+            # Visualizza l'immagine iniziale
+            self.image_display = self.ax_image.imshow(image, cmap='gray')
+            self.ax_image.set_title("Current Image")
+            self.ax_image.axis('off')
+        else:
+            # Aggiorna l'immagine senza ridisegnare l'intero asse
+            self.image_display.set_data(image)
+            for collection in self.ax_image.collections:
+                collection.remove()
+            for line in self.ax_image.lines:
+                line.remove()
 
+        # Mantieni i limiti degli assi fissi
+        self.ax_image.set_xlim(0, image.shape[1])
+        self.ax_image.set_ylim(image.shape[0], 0)
         # Overlay green crosses and lines on the image
         if (self.image_points_green1 is not None) and (self.image_points_green2 is not None) and \
            (len(self.image_points_green1) > 1) and (len(self.image_points_green2) > 1):
@@ -109,7 +126,7 @@ class MapVisualizer:
             x_vals_blue = [p[0] for p in self.image_points_blue]
             y_vals_blue = [p[1] for p in self.image_points_blue]
             self.ax_image.scatter(x_vals_blue, y_vals_blue, c='b', marker='x', s=20)
-
+        
     def add_image_points(self, points_green1, points_green2, points_red, harris_points, points_blue):
         """Add points to overlay on the image.
 
