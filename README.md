@@ -12,6 +12,33 @@ Repository for VAMR course project at UZH.
 xhost +local:docker
 ```
 
+# Run the VO algorithm
+To run the corresponding Python script, simply execute these lines:
+```
+cd /home/dev/src/
+python3 run.py
+```
+
+To change the evaluated dataset (available options: 'kitti', 'malaga', 'parking'), use the --dataset argument. For example, to switch to the Malaga dataset, simply run:
+```
+python3 run.py --dataset malaga
+```
+
+You can also enable the debug mode as:
+```
+python3 run.py --debug
+```
+
+To visualize the candidate features, simply run:
+```
+python3 run.py --visualize_candidates
+```
+
+Lastly, you can enable ground-truth initialization as follows:
+```
+python3 run.py --gt_init
+```
+
 # Download datasets
 Run the following bash script to download the required datasets and unzip them:
 ```
