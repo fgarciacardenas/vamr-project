@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
+import argparse
 from dataloader import *
 from initialization import *
-from utils import track_candidates
 from visualizer_class import MapVisualizer
-
-DATASET = 'malaga'
-DEBUG = False
-VISUALIZE_CANDIDATES = False
-GT_INIT = False
 
 """
 Conventions:
@@ -20,7 +15,41 @@ Conventions:
 - t_a_b: Translation from frame b to frame a.
 """
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Visual Odometry Script")
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        default='kitti',
+        choices=['kitti', 'malaga', 'parking'],
+        help="Specify the dataset to use. Default is 'kitti'."
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help="Enable debug mode."
+    )
+    parser.add_argument(
+        '--visualize_candidates',
+        action='store_true',
+        help="Enable visualization of candidate features."
+    )
+    parser.add_argument(
+        '--gt_init',
+        action='store_true',
+        help="Enable ground truth initialization."
+    )
+    return parser.parse_args()
+
 def main():
+    # Parse command-line arguments
+    args = parse_arguments()
+    
+    DATASET = args.dataset
+    DEBUG = args.debug
+    VISUALIZE_CANDIDATES = args.visualize_candidates
+    GT_INIT = args.gt_init
+
     # Initialize FrameManager
     dataset_dir = {
         'kitti': {
@@ -96,7 +125,15 @@ def main():
             }
         }
     }
-    frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET]['index'], bootstrap_frames=[0, 1])
+
+    if DATASET not in dataset_dir:
+        raise ValueError(f"Dataset '{DATASET}' is not supported. Choose from {list(dataset_dir.keys())}.")
+
+    frame_manager = FrameManager(
+        base_path='/home/dev/data', 
+        dataset=dataset_dir[DATASET]['index'], 
+        bootstrap_frames=[0, 1]
+    )
     
     # Load K matrix
     K = frame_manager.K
@@ -365,4 +402,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
