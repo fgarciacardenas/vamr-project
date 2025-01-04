@@ -4,9 +4,9 @@ from initialization import *
 from utils import track_candidates
 from visualizer_class import MapVisualizer
 
-DATASET = 'kitti'
+DATASET = 'malaga'
 DEBUG = False
-DEBUG_CANDIDATES = True
+VISUALIZE_CANDIDATES = False
 GT_INIT = False
 
 """
@@ -49,26 +49,26 @@ def main():
         }, 
         'malaga': {
             'index': 1,
-            'alpha': np.deg2rad(2),
+            'alpha': np.deg2rad(1.5),
             'initializer': {
                 'quality': 0.005,
-                'distance': 30,
-                'max_corners': 100,
+                'distance': 20,
+                'max_corners': 300,
             },
             'running_very_high_quality': {
                 'quality': 0.01,
                 'distance': 15,
-                'max_corners': 50,
+                'max_corners': 40,
             },
             'running_high_quality': {
                 'quality': 0.005,
-                'distance': 30,
-                'max_corners': 100,
+                'distance': 20,
+                'max_corners': 150,
             },
             'running_sparse': {
-                'quality': 0.001,
-                'distance': 10,
-                'max_corners': 50,
+                'quality': 0.0005,
+                'distance': 30,
+                'max_corners': 40,
             }
         },  
         'parking': {
@@ -331,7 +331,7 @@ def main():
             S_F = np.vstack([S_F, F_candidate[c_duplicate_mask]])
             S_tau = np.vstack([S_tau, Tau_candidate[c_duplicate_mask]])
                               
-            if DEBUG_CANDIDATES:
+            if VISUALIZE_CANDIDATES:
                 # Visualize candidates
                 visualizer.add_image_points(None, None, None, None, S_C)
         else:
@@ -357,8 +357,8 @@ def main():
         visualizer.update_image(I_curr)
         visualizer.update_plot(iFrame)
         iFrame += 1
-        #if iFrame >= 100:
-        #    break
+        if iFrame >= 650:
+            break
 
     visualizer.close_video()
     print(f"Video saved at {visualizer.video_path}")
