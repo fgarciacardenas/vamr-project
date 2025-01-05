@@ -243,8 +243,6 @@ def main():
         P_0_inliers = previous_state['keypoints_2D'][matches == 1] # Inliers from KLT tracking
         P_0_outliers = np.concatenate([previous_state['keypoints_2D'][matches == 0], # Outliers from KLT tracking
                                        P_0_inliers[np.setdiff1d(np.arange(len(P_0_inliers)), rs_inliers)]]) # Outliers from PnP 
-        # TODO: Check if this is correct, would P_0_inliers[rs_inliers == 0] do the same?
-        
         P_0_inliers = P_0_inliers[rs_inliers] # Inliers from PnP
 
         next_pose = np.vstack((np.hstack((R, t)),
@@ -268,7 +266,6 @@ def main():
         # Make sure the candidate features are not already in P (saves them from KLT)
         c_duplicate_mask = []
         for i, new_C in enumerate(C_candidate):
-            # TODO: this function doesn't take advantage of the geometry and is O(N^2), we can make it O(NlogN)
             is_member = np.any(np.all(np.isclose(new_C, P_1_inliers, rtol=5e-3, atol=1e-1), axis=1)) 
             if not is_member:
                 c_duplicate_mask.append(i)

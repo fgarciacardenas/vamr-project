@@ -49,7 +49,7 @@ def expand_C(C, F, Tau, img, R, t):
     Tau = np.concatenate((Tau, np.full(C_new.shape[1], T)), axis=1)
     
     # Remove duplicates
-    C = np.unique(C, axis=1) #TODO: maybe there is a better way to do this)
+    C = np.unique(C, axis=1)
     F = np.unique(F, axis=1)
     
     return C, F, Tau

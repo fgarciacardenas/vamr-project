@@ -144,28 +144,6 @@ def initialize_vo(frame_manager, ft_params, klt_params, _debug: bool = False, _g
 
     return I_2, P_0_inliers, P_2_inliers, P_0_outliers, points_3D, R, t
 
-    # TODO: Populate C and Tau
-    # Shape P_i as [2,N]
-    #P_0 = P_0.squeeze().T
-    #P_2 = P_2.squeeze().T
-    #print(inlier_pts1.shape)
-    #print(inlier_pts2.shape)
-    # print(inlier_pts1.T.shape)
-
-    # F_init = inlier_pts1.T
-    # Tau_init = np.full(F_init.shape[0], np.hstack((R, t)))
-    
-    # C_new, F_new, Tau_new = track_candidates(inlier_pts1.T, F_init, Tau_init, I_1, I_2)
-    # print(C_new.shape)
-    # print(F_new.shape)
-    # print(Tau_new.shape)
-    
-    # C_prime, F_prime, Tau_prime = expand_C(C_new, F_new, Tau_new, I_2, R, t)
-    # print(C_prime.shape)
-    # print(F_prime.shape)
-    # print(Tau_prime.shape)
-    # # Triangulate the points using the PnP algorithm
-    # X_new, P_new, R, t = triangulate_ransac_pnp(points_3D, inlier_pts1.T, K)
 
 def disambiguateRelativePose(Rots,u3,points0_h,points1_h,K1,K2):
     """ DISAMBIGUATERELATIVEPOSE- finds the correct relative camera pose (among
