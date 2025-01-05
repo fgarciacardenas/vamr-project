@@ -6,7 +6,7 @@ from matplotlib.gridspec import GridSpec
 
 class MapVisualizer:
 
-    def __init__(self, output_dir='../output/test', video_path='../output/video.mp4'):
+    def __init__(self, output_dir='../output/test', video_path='../output/video.mp4', _save=False):
         self.points = []
         self.trajectory = []
         self.ground_truth = []
@@ -20,6 +20,7 @@ class MapVisualizer:
         self.output_dir = output_dir
         self.video_path = video_path
         self.video_writer = None
+        self.SAVE_IMG = _save
 
         # Set up the figure and subplots using GridSpec
         self.fig = plt.figure(figsize=(12, 8), constrained_layout=True)
@@ -257,20 +258,25 @@ class MapVisualizer:
         if self.landmark_counts:
             self.ax_landmarks.plot(self.landmark_counts, c='g')
         frame_path = os.path.join(self.output_dir, f"frame_{frame_idx:04d}.png")
-        self.fig.savefig(frame_path)
-        self.fig.savefig(os.path.join(self.output_dir, f"_movie.png"))
+        
+        # Only save images and video if prompted
+        if self.SAVE_IMG:
+            self.fig.savefig(frame_path)
+            self.fig.savefig(os.path.join(self.output_dir, f"_movie.png"))
+            
+            if self.video_writer is None:
+                width, height = self.fig.get_size_inches() * self.fig.dpi
+                width, height = int(width), int(height)
+                self.video_writer = cv2.VideoWriter(self.video_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (width, height))
 
-        if self.video_writer is None:
-            width, height = self.fig.get_size_inches() * self.fig.dpi
-            width, height = int(width), int(height)
-            self.video_writer = cv2.VideoWriter(self.video_path, cv2.VideoWriter_fourcc(*'mp4v'), 10, (width, height))
-
-        self.fig.canvas.draw()
-        frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
-        frame = frame.reshape(int(self.fig.get_figheight() * self.fig.dpi),
-                              int(self.fig.get_figwidth() * self.fig.dpi), 3)
-        self.video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-
+            self.fig.canvas.draw()
+            frame = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+            frame = frame.reshape(int(self.fig.get_figheight() * self.fig.dpi),
+                                int(self.fig.get_figwidth() * self.fig.dpi), 3)
+            self.video_writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        # Else just show on screen
+        else:
+            self.fig.canvas.draw()
 
     def close_video(self):
         """Release the video writer."""

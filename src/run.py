@@ -39,6 +39,11 @@ def parse_arguments():
         action='store_true',
         help="Enable ground truth initialization."
     )
+    parser.add_argument(
+        '--save',
+        action='store_true',
+        help="Enable video generation."
+    )
     return parser.parse_args()
 
 def main():
@@ -194,7 +199,7 @@ def main():
                                 np.array([0,0,0,1]))))
     
     # Initialize visualizer
-    visualizer = MapVisualizer()
+    visualizer = MapVisualizer(_save=args.save)
     visualizer.add_points(X_2)
     visualizer.add_pose(np.zeros(3))
     visualizer.add_pose(-cam_R.T@cam_t)
