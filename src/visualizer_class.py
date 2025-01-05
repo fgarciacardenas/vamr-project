@@ -6,7 +6,7 @@ from matplotlib.gridspec import GridSpec
 
 class MapVisualizer:
 
-    def __init__(self, output_dir='/home/dev/output/test', video_path='/home/dev/output/video.mp4'):
+    def __init__(self, output_dir='../output/test', video_path='../output/video.mp4'):
         self.points = []
         self.trajectory = []
         self.ground_truth = []

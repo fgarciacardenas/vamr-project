@@ -14,7 +14,7 @@ def main():
 
     # Initialize FrameManager to load images and ground truth poses
     dataset_dir = {'kitti': 0, 'malaga': 1, 'parking': 2}
-    frame_manager = FrameManager(base_path='/home/dev/data', dataset=dataset_dir[DATASET], bootstrap_frames=[FRAME_IDX_1, FRAME_IDX_2])
+    frame_manager = FrameManager(base_path='../data', dataset=dataset_dir[DATASET], bootstrap_frames=[FRAME_IDX_1, FRAME_IDX_2])
 
     # Load camera intrinsic matrix
     K = frame_manager.get_intrinsic_params()

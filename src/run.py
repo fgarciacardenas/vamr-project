@@ -130,7 +130,7 @@ def main():
         raise ValueError(f"Dataset '{DATASET}' is not supported. Choose from {list(dataset_dir.keys())}.")
 
     frame_manager = FrameManager(
-        base_path='/home/dev/data', 
+        base_path='../data', 
         dataset=dataset_dir[DATASET]['index'], 
         bootstrap_frames=[0, 1]
     )
