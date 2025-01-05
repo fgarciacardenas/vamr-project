@@ -3,7 +3,7 @@
 # === Configuration ===
 
 # Destination directory where files will be downloaded and extracted
-DEST_PATH="/home/dev/data"
+DEST_PATH="../data"
 
 # URLs of the files to download
 URLS=(

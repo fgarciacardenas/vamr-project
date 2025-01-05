@@ -15,7 +15,7 @@ xhost +local:docker
 # Run the VO algorithm
 To run the corresponding Python script, simply execute these lines:
 ```
-cd /home/dev/src/
+cd src
 python3 run.py
 ```
 
@@ -42,7 +42,7 @@ python3 run.py --gt_init
 # Download datasets
 Run the following bash script to download the required datasets and unzip them:
 ```
-bash /home/dev/data/download_dataset.sh
+bash data/download_dataset.sh
 ```
 
 
