@@ -277,6 +277,7 @@ class MapVisualizer:
         # Else just show on screen
         else:
             self.fig.canvas.draw()
+            plt.pause(0.000001)
 
     def close_video(self):
         """Release the video writer."""
