@@ -1,0 +1,5 @@
+name: vamr-proj
+channels:
+  - conda-forge
+  - defaults
+prefix: /home/facundo/anaconda3/envs/vamr-proj

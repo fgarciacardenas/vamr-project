@@ -7,10 +7,20 @@ Repository for VAMR course project at UZH.
 3. Open the repository folder in VS Code.
 4. Press Ctrl+Shift+P y select "Dev Container: Rebuild Container".
 
+
 # Add X11 visualization to the Docker container
 ```
 xhost +local:docker
 ```
+
+
+# Use conda environment
+```
+conda create -n vamr-proj
+conda activate vamr-proj
+```
+The conda environment used for development can be found in the file 'environment.yml'.
+
 
 # Run the VO algorithm
 To run the corresponding Python script, simply execute these lines:
